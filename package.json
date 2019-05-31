@@ -1,0 +1,27 @@
+{
+  "name": "musicbot",
+  "version": "1.0.0",
+  "description": "Simple Discord Music Bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bakapear/MusicBot.git"
+  },
+  "author": "bakapear",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bakapear/MusicBot/issues"
+  },
+  "homepage": "https://github.com/bakapear/MusicBot#readme",
+  "dependencies": {
+    "discord.js": "^11.5.1",
+    "ffmpeg-binaries": "^4.0.0",
+    "got": "^9.6.0",
+    "node-opus": "^0.3.2",
+    "ytdl-core": "^0.29.2"
+  }
+}
