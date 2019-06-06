@@ -21,6 +21,7 @@ function checkShorts (cmd) {
   switch (cmd) {
     case 'p': return 'play'
     case 'n': case 'next': return 'skip'
+    case 't': return 'pause'
     case 'np': return 'nowplaying'
     case 'q': return 'queue'
     case 's': return 'stop'
@@ -78,6 +79,20 @@ let action = {
     if (conn) {
       if (conn.dispatcher) {
         conn.dispatcher.end()
+      } else msg.channel.send('Nothing is playing!')
+    } else msg.channel.send("I'm not in a voice channel!")
+  },
+  pause: async (msg, args) => {
+    let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
+    if (conn) {
+      if (conn.dispatcher) {
+        if (conn.dispatcher.paused) {
+          conn.dispatcher.resume()
+          msg.channel.send('Unpaused player!')
+        } else {
+          conn.dispatcher.pause()
+          msg.channel.send('Paused player!')
+        }
       } else msg.channel.send('Nothing is playing!')
     } else msg.channel.send("I'm not in a voice channel!")
   },
