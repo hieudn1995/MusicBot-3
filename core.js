@@ -4,12 +4,12 @@ let cfg = require('./config.json')
 let Discord = require('discord.js')
 let bot = new Discord.Client()
 
-let queue = {}
+let voice = {}
 
 bot.on('ready', () => console.log('Woof.'))
 
 bot.on('message', msg => {
-  if (!queue[msg.guild.id]) queue[msg.guild.id] = { songs: [], playing: false }
+  if (!voice[msg.guild.id]) voice[msg.guild.id] = { songs: [], playing: false }
   if (!msg.content.startsWith(cfg.prefix)) return
   let args = msg.content.split(' ')
   let cmd = args.shift().substr(1).toLowerCase()
@@ -45,33 +45,60 @@ let action = {
         return
       }
     }
-    let song = await searchYT(args.join(' '))
+    let queue = voice[msg.guild.id]
+    let song = null
+    let endings = ['.mp3', '.mp4', '.ogg', '.wav', '.flac']
+    if (endings.some(x => args.join(' ').endsWith(x))) {
+      song = await getSongData(args.join(' '))
+    } else {
+      song = await searchYT(args.join(' '))
+    }
     if (!song) {
       msg.channel.send('Nothing found!')
       return
     }
-    if (!queue[msg.guild.id].songs.length) {
-      queue[msg.guild.id].songs.push(song)
+    song.timestamp = Date.now()
+    song.author = {
+      name: `${msg.author.username}#${msg.author.discriminator}`,
+      avatar: `https://cdn.discordapp.com/avatars/${msg.author.id}/${msg.author.avatar}.png`
+    }
+    if (!queue.songs.length) {
+      queue.songs.push(song)
       let playQueue = () => {
-        let stream = ytdl(queue[msg.guild.id].songs[0].url, { filter: 'audioonly' })
-        let disp = conn.playStream(stream)
+        let disp = null
+        song = queue.songs[0]
+        switch (song.type) {
+          case 'yt': {
+            let stream = ytdl(song.url, { filter: 'audioonly' })
+            disp = conn.playStream(stream)
+            break
+          }
+          case 'file': {
+            disp = conn.playFile(song.url)
+            break
+          }
+          case 'url': {
+            disp = conn.playArbitraryInput(song.url)
+            break
+          }
+        }
         disp.on('start', () => {
           conn.player.streamingData.pausedTime = 0
-          queue[msg.guild.id].playing = true
-          msg.channel.send(`Now Playing: \`${queue[msg.guild.id].songs[0].title}\``)
+          queue.playing = true
+          msg.channel.send(getSongMessage(queue, 'np'))
         })
         disp.on('end', () => {
-          queue[msg.guild.id].songs.shift()
-          queue[msg.guild.id].playing = false
-          if (queue[msg.guild.id].songs.length) {
+          queue.songs.shift()
+          queue.playing = false
+          if (queue.songs.length) {
             setTimeout(() => playQueue(), 1500)
           }
         })
       }
       playQueue()
     } else {
-      queue[msg.guild.id].songs.push(song)
-      msg.channel.send(`Added To Queue: \`${song.title}\``)
+      queue.songs.push(song)
+      msg.channel.send(getSongMessage(queue, 'add'))
     }
   },
   skip: async (msg, args) => {
@@ -99,41 +126,18 @@ let action = {
   nowplaying: async (msg, args) => {
     let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
     if (conn) {
-      if (queue[msg.guild.id].playing) {
-        let song = queue[msg.guild.id].songs[0]
-        msg.channel.send({
-          embed: {
-            title: 'Now Playing',
-            description: `\`${song.title}\``,
-            thumbnail: { url: song.img }
-          }
-        })
+      let queue = voice[msg.guild.id]
+      if (queue.playing) {
+        msg.channel.send(getSongMessage(queue, 'np', true))
       } else msg.channel.send('Nothing is playing!')
     } else msg.channel.send("I'm not in a voice channel!")
   },
   queue: async (msg, args) => {
     let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
     if (conn) {
-      if (queue[msg.guild.id].songs.length) {
-        let songlist = []
-        let len = queue[msg.guild.id].songs.length
-        let limit = 11
-        if (len > limit) len = limit
-        for (let i = 0; i < len; i++) {
-          let num = (i === 0) ? 'NP:' : i + '.'
-          let title = queue[msg.guild.id].songs[i].title
-          if (title.length > 65) title = title.substr(0, 62) + '...'
-          songlist.push(`${num} \`${title}\``)
-        }
-        if (queue[msg.guild.id].songs.length > limit) {
-          songlist.push(`And ${queue[msg.guild.id].songs.length - len} more...`)
-        }
-        msg.channel.send({
-          embed: {
-            title: `Queue (${queue[msg.guild.id].songs.length} Songs)`,
-            description: songlist.join('\r\n')
-          }
-        })
+      let queue = voice[msg.guild.id]
+      if (queue.songs.length) {
+        msg.channel.send(getSongMessage(queue, 'queue'))
       } else msg.channel.send('Queue is empty!')
     } else msg.channel.send("I'm not in a voice channel!")
   },
@@ -143,7 +147,7 @@ let action = {
       let vc = msg.member.voiceChannel
       if (vc) {
         await vc.leave()
-        queue[msg.guild.id] = { songs: [], playing: false }
+        voice[msg.guild.id] = { songs: [], playing: false }
       } else msg.channel.send("You're not in a voice channel!")
     } else msg.channel.send("I'm not in a voice channel!")
   }
@@ -164,9 +168,86 @@ async function searchYT (query) {
   if (!body.items.length) return null
   let item = body.items[0]
   return {
+    type: 'yt',
     title: item.snippet.title,
     url: 'https://youtube.com/watch?v=' + item.id.videoId,
     img: item.snippet.thumbnails.high.url
+  }
+}
+
+function getSongMessage (queue, type, any) {
+  let msg = ''
+  switch (type) {
+    case 'np': {
+      let song = queue.songs[0]
+      msg = {
+        embed: {
+          title: 'Now Playing',
+          url: song.url,
+          description: `\`${song.title}\``,
+          thumbnail: { url: song.img },
+          timestamp: song.timestamp,
+          footer: {
+            icon_url: song.author.avatar,
+            text: song.author.name
+          }
+        }
+      }
+      if (any === true) {
+        delete msg.embed.thumbnail
+        msg.embed.image = { url: song.img }
+      }
+      break
+    }
+    case 'add': {
+      let song = queue.songs[queue.songs.length - 1]
+      msg = {
+        embed: {
+          title: 'Added To Queue',
+          url: song.url,
+          description: `\`${song.title}\``,
+          thumbnail: { url: song.img },
+          timestamp: song.timestamp,
+          footer: {
+            icon_url: song.author.avatar,
+            text: song.author.name
+          }
+        }
+      }
+      break
+    }
+    case 'queue': {
+      let songlist = []
+      let len = queue.songs.length
+      let limit = 11
+      if (len > limit) len = limit
+      for (let i = 0; i < len; i++) {
+        let num = (i === 0) ? 'NP:' : i + '.'
+        let title = queue.songs[i].title
+        if (title.length > 65) title = title.substr(0, 62) + '...'
+        songlist.push(`${num} \`${title}\``)
+      }
+      if (queue.songs.length > limit) {
+        songlist.push(`And ${queue.songs.length - len} more...`)
+      }
+      msg = {
+        embed: {
+          title: `Queue (${queue.songs.length} Item${queue.songs.length > 1 ? 's' : ''})`,
+          description: songlist.join('\r\n')
+        }
+      }
+      break
+    }
+  }
+  return msg
+}
+
+async function getSongData (url) {
+  return {
+    type: 'url',
+    title: url,
+    url: url,
+    img: null
   }
 }
 
