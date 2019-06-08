@@ -14,7 +14,8 @@ bot.on('message', msg => {
   let args = msg.content.split(' ')
   let cmd = args.shift().substr(1).toLowerCase()
   cmd = checkShorts(cmd)
-  if (action[cmd]) action[cmd](msg, args)
+  let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
+  if (action[cmd]) action[cmd](conn, msg, args)
 })
 
 function checkShorts (cmd) {
@@ -30,12 +31,11 @@ function checkShorts (cmd) {
 }
 
 let action = {
-  play: async (msg, args) => {
+  play: async (conn, msg, args) => {
     if (!args.length) {
       msg.channel.send(`Usage: \`${cfg.prefix}play <query>\``)
       return
     }
-    let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
     if (!conn) {
       let vc = msg.member.voiceChannel
       if (vc) {
@@ -101,16 +101,14 @@ let action = {
       msg.channel.send(getSongMessage(queue, 'add'))
     }
   },
-  skip: async (msg, args) => {
-    let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
+  skip: async (conn, msg, args) => {
     if (conn) {
       if (conn.dispatcher) {
         conn.dispatcher.end()
       } else msg.channel.send('Nothing is playing!')
     } else msg.channel.send("I'm not in a voice channel!")
   },
-  pause: async (msg, args) => {
-    let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
+  pause: async (conn, msg, args) => {
     if (conn) {
       if (conn.dispatcher) {
         if (conn.dispatcher.paused) {
@@ -123,8 +121,7 @@ let action = {
       } else msg.channel.send('Nothing is playing!')
     } else msg.channel.send("I'm not in a voice channel!")
   },
-  nowplaying: async (msg, args) => {
-    let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
+  nowplaying: async (conn, msg, args) => {
     if (conn) {
       let queue = voice[msg.guild.id]
       if (queue.playing) {
@@ -132,8 +129,7 @@ let action = {
       } else msg.channel.send('Nothing is playing!')
     } else msg.channel.send("I'm not in a voice channel!")
   },
-  queue: async (msg, args) => {
-    let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
+  queue: async (conn, msg, args) => {
     if (conn) {
       let queue = voice[msg.guild.id]
       if (queue.songs.length) {
@@ -141,8 +137,7 @@ let action = {
       } else msg.channel.send('Queue is empty!')
     } else msg.channel.send("I'm not in a voice channel!")
   },
-  stop: async (msg, args) => {
-    let conn = bot.voiceConnections.find(x => x.channel.id === msg.member.voiceChannelID)
+  stop: async (conn, msg, args) => {
     if (conn) {
       let vc = msg.member.voiceChannel
       if (vc) {
@@ -172,6 +167,15 @@ async function searchYT (query) {
     title: item.snippet.title,
     url: 'https://youtube.com/watch?v=' + item.id.videoId,
     img: item.snippet.thumbnails.high.url
+  }
+}
+
+async function getSongData (url) {
+  return {
+    type: 'url',
+    title: url,
+    url: url,
+    img: null
   }
 }
 
@@ -240,15 +244,6 @@ function getSongMessage (queue, type, any) {
     }
   }
   return msg
-}
-
-async function getSongData (url) {
-  return {
-    type: 'url',
-    title: url,
-    url: url,
-    img: null
-  }
 }
 
 if (process.env.TOKEN && process.env.KEY) {
