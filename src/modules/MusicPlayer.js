@@ -166,17 +166,17 @@ async function searchYT (query) {
   let payload = {
     part: 'snippet',
     type: 'video',
-    maxResults: 50,
+    maxResults: 1,
     key: key,
     q: query
   }
   if (ytdl.validateURL(query) || ytdl.validateID(query)) {
     url = 'https://www.googleapis.com/youtube/v3/videos'
     delete payload.q
-    let id = extractYTIdFromLink(query)
+    let id = extractYTLinkID(query)
     payload.id = id || query
   }
-  let playlistId = extractYTIdFromLink(query)
+  let playlistId = extractYTLinkID(query)
   if (playlistId) {
     let item = await getYTPlaylistVids(playlistId)
     return item
@@ -276,7 +276,7 @@ async function getSongData (url) {
   }
 }
 
-function extractYTIdFromLink (query) {
+function extractYTLinkID (query) {
   let regex = /^(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?.*?(?:v|list)=(.*?)(?:&|$)|^(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?(?:(?!=).)*\/(.*)$/g
   let match = regex.exec(query)
   return match ? match[1] : null
@@ -295,16 +295,11 @@ function formatTime (ms) {
 }
 
 function decodeEntities (str) {
-  let translate = {
-    'nbsp': ' ',
-    'amp': '&',
-    'quot': '"',
-    'lt': '<',
-    'gt': '>'
-  }
+  if (!str) return
+  let translate = { nbsp: ' ', amp: '&', quot: '"', lt: '<', gt: '>' }
   return str
-    .replace(/&(nbsp|amp|quot|lt|gt);/g, (match, entity) => translate[entity])
-    .replace(/&#(\d+);/gi, (match, numStr) => String.fromCharCode(parseInt(numStr, 10)))
+    .replace(/&(nbsp|amp|quot|lt|gt);/g, (m, e) => translate[e])
+    .replace(/&#(\d+);/gi, (m, e) => String.fromCharCode(parseInt(e, 10)))
 }
 
 module.exports = MusicPlayer
