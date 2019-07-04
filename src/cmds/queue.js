@@ -5,7 +5,7 @@ module.exports = {
   usage: '',
   args: 0,
   command: async function (msg, cmd, args) {
-    let { Player } = global
+    let Player = global.getPlayer(msg, true)
     if (!Player || !Player.size() || !Player.playing) {
       msg.channel.send('Nothing is playing right now!')
       return
@@ -13,11 +13,8 @@ module.exports = {
     let list = []
     let max = 15
     let size = Player ? Player.size() : null
-    if (!size) {
-      msg.channel.send('Nothing is playing right now!')
-      return
-    }
     let len = size > max ? max : size
+    if (!len) return
     for (let i = 0; i < len; i++) {
       let item = Player.get(i)
       let num = (i === 0) ? 'NP:' : `${i}.`

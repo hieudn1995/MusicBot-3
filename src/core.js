@@ -3,8 +3,34 @@ let Discord = require('discord.js')
 let path = require('path')
 let fs = require('fs')
 let bot = new Discord.Client()
+let MusicPlayer = require('./modules/MusicPlayer')
 
-global.Player = null
+global.Player = {}
+global.getPlayer = (msg, checkOnly) => {
+  let Player = global.Player
+  if (checkOnly) return Player.hasOwnProperty(msg.guild.id) && Player[msg.guild.id].connection ? Player[msg.guild.id] : null
+  if (Player.hasOwnProperty(msg.guild.id)) return Player[msg.guild.id]
+  else {
+    if (!msg.member.voiceChannel) return null
+    let Player = new MusicPlayer(msg.member.voiceChannel)
+    Player.on('playing', item => {
+      msg.channel.send({
+        embed: {
+          title: 'Now Playing',
+          url: item.url,
+          description: `\`${item.title}\``,
+          thumbnail: { url: item.img },
+          footer: {
+            icon_url: item.author.avatar,
+            text: `${item.author.name} • ${Player.time()}/${item.duration}`
+          }
+        }
+      })
+    })
+    global.Player[msg.guild.id] = Player
+    return Player
+  }
+}
 
 bot.on('ready', () => console.log('Woof.'))
 

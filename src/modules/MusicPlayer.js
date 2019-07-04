@@ -15,15 +15,20 @@ class MusicPlayer extends Event {
 
 MusicPlayer.prototype.add = async function (query, author) {
   let item = null
-  if (['.mp3', '.mp4', '.ogg', '.wav', '.flac', '.webm'].some(x => query.endsWith(x)) && query.startsWith('http')) {
-    item = await getSongData(query)
-  } else {
-    item = await searchYT(query)
-    if (item.error) return item
+  if (query && !query.type) {
+    if (['.mp3', '.mp4', '.ogg', '.wav', '.flac', '.webm'].some(x => query.endsWith(x)) && query.startsWith('http')) {
+      item = await getSongData(query)
+    } else {
+      item = await searchYT(query)
+      if (item.error) return item
+    }
   }
-  let authorObj = {
-    name: `${author.username}#${author.discriminator}`,
-    avatar: `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.png`
+  let authorObj = null
+  if (author) {
+    authorObj = {
+      name: `${author.username}#${author.discriminator}`,
+      avatar: `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.png`
+    }
   }
   if (item && item.playlist) {
     let items = item.items
@@ -60,14 +65,14 @@ MusicPlayer.prototype.play = async function (query, author) {
     if (!success) return null
   }
   let song = query ? await this.add(query, author) : null
-  if (song.error) return song
+  if (song && song.error) return song
   if (!this.playing && this.queue.length) {
     let item = this.first()
     let disp = null
-    switch (item.type) {
+    item.duration = '∞'
+    switch (item.type) { // TODO add item.duration somehow
       case 'yt': {
-        let stream = ytdl(item.url, { filter: 'audioonly' }) // TODO add item.duration somehow
-        item.duration = '∞'
+        let stream = ytdl(item.url, { filter: 'audioonly' })
         disp = this.connection.playStream(stream)
         break
       }
