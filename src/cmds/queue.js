@@ -18,7 +18,7 @@ module.exports = {
     for (let i = 0; i < len; i++) {
       let item = Player.get(i)
       let num = (i === 0) ? 'NP:' : `${i}.`
-      list.push(`${num} \`${trimSentence(item.title, 50)} [${item.duration}]\``)
+      list.push(`${num} \`${trimSentence(item.title, 50)}\``)
     }
     if (size > max) {
       list.push(`And ${size - len} more...`)

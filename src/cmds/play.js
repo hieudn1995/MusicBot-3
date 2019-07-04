@@ -13,7 +13,7 @@ module.exports = {
     let item = await Player.play(args.join(' '), msg.author)
     if (!item) msg.channel.send('Nothing found!')
     else if (item.error) msg.channel.send(item.error)
-    if (Player.size() > 1) {
+    else if (Player.playing) {
       if (item.playlist) {
         let items = item.items
         msg.channel.send({

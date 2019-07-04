@@ -22,7 +22,7 @@ MusicPlayer.prototype.add = async function (query, author) {
       item = await searchYT(query)
       if (item.error) return item
     }
-  }
+  } else item = query
   let authorObj = null
   if (author) {
     authorObj = {
@@ -149,9 +149,9 @@ MusicPlayer.prototype.pause = function () {
 }
 
 MusicPlayer.prototype.reset = function () {
+  this.queue = []
   if (this.connection) this.connection.channel.leave()
   this.connection = null
-  this.queue = []
   this.playing = false
   this.emit('reset')
 }
