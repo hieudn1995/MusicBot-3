@@ -4,9 +4,10 @@ let Event = require('events')
 let key = process.env.KEY
 
 class MusicPlayer extends Event {
-  constructor (channel) {
+  constructor (msg) {
     super()
-    this.channel = channel
+    this.msg = msg
+    this.channel = msg.member.voiceChannel
     this.connection = null
     this.queue = []
     this.playing = false
