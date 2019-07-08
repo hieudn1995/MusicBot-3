@@ -1,4 +1,5 @@
 let got = require('got')
+let icy = require('icy')
 let ytdl = require('ytdl-core')
 let Event = require('events')
 let key = process.env.KEY
@@ -68,7 +69,7 @@ MusicPlayer.prototype.play = async function (query, author) {
   let song = query ? await this.add(query, author) : null
   if (song && song.error) return song
   if (!this.playing && this.queue.length) {
-    let item = this.first()
+    let item = await this.first()
     let disp = null
     if (!item.duration) item.duration = '∞'
     switch (item.type) {
@@ -89,6 +90,10 @@ MusicPlayer.prototype.play = async function (query, author) {
         disp = this.connection.playArbitraryInput(item.url)
         break
       }
+      case 'radio': {
+        disp = this.connection.playArbitraryInput(item.url)
+        break
+      }
     }
     disp.on('start', () => {
       this.connection.player.streamingData.pausedTime = 0
@@ -106,8 +111,13 @@ MusicPlayer.prototype.play = async function (query, author) {
   return song
 }
 
-MusicPlayer.prototype.first = function () {
-  return this.queue[0]
+MusicPlayer.prototype.first = async function () {
+  let item = this.queue[0]
+  if (item && item.type === 'radio') {
+    let data = await getRadioData(item.url)
+    item.radio = data
+  }
+  return item
 }
 
 MusicPlayer.prototype.last = function () {
@@ -183,7 +193,7 @@ async function searchYT (query) {
     payload.id = id || query
   }
   let playlistId = extractYTLinkID(query)
-  if (playlistId.length < 12) playlistId = null
+  if (playlistId && playlistId.length < 12) playlistId = null
   if (playlistId) {
     let item = await getYTPlaylistVids(playlistId)
     return item
@@ -307,6 +317,21 @@ function decodeEntities (str) {
   return str
     .replace(/&(nbsp|amp|quot|lt|gt);/g, (m, e) => translate[e])
     .replace(/&#(\d+);/gi, (m, e) => String.fromCharCode(parseInt(e, 10)))
+}
+
+function getRadioData (url) {
+  return new Promise((resolve, reject) => {
+    icy.get(url, res => {
+      if (res.statusCode !== 200) resolve(null)
+      res.on('metadata', metadata => {
+        let headers = res.headers
+        let name = headers ? headers['icy-name'] : null
+        let parsed = icy.parse(metadata)
+        let title = parsed ? parsed.StreamTitle : null
+        resolve({ name: name, song: title })
+      })
+    })
+  })
 }
 
 module.exports = MusicPlayer

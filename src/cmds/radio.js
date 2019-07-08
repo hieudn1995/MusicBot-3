@@ -31,7 +31,7 @@ async function getRadio (type) {
   type = type.toLowerCase()
   if (radios.hasOwnProperty(type)) {
     return {
-      type: 'url',
+      type: 'radio',
       title: type + ' Radio',
       url: radios[type]
     }

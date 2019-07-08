@@ -21,6 +21,7 @@
     "discord.js": "^11.5.1",
     "ffmpeg-binaries": "^4.0.0",
     "got": "^9.6.0",
+    "icy": "^2.1.0",
     "node-opus": "^0.3.2",
     "ytdl-core": "^0.29.2"
   }
