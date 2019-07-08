@@ -183,6 +183,7 @@ async function searchYT (query) {
     payload.id = id || query
   }
   let playlistId = extractYTLinkID(query)
+  if (playlistId.length < 12) playlistId = null
   if (playlistId) {
     let item = await getYTPlaylistVids(playlistId)
     return item
