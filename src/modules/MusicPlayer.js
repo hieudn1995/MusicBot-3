@@ -69,8 +69,8 @@ MusicPlayer.prototype.play = async function (query, author) {
   if (!this.playing && this.queue.length) {
     let item = this.first()
     let disp = null
-    item.duration = '∞'
-    switch (item.type) { // TODO add item.duration somehow
+    if (!item.duration) item.duration = '∞'
+    switch (item.type) {
       case 'yt': {
         let stream = ytdl(item.url, { filter: 'audioonly' })
         disp = this.connection.playStream(stream)
