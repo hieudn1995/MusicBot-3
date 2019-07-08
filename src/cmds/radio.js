@@ -32,7 +32,7 @@ async function getRadio (type) {
   if (radios.hasOwnProperty(type)) {
     return {
       type: 'radio',
-      title: type + ' Radio',
+      title: keys[radios.indexOf(type)] + ' Radio',
       url: radios[type]
     }
   } else return null
