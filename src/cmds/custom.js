@@ -22,13 +22,9 @@ module.exports = {
 }
 
 async function getChatsound (query, rnd) {
-  let url = 'https://api.github.com/search/code'
+  let url = `https://api.github.com/search/code?q=${encodeURIComponent(query.trim())}+in:path+extension:ogg+path:sound/chatsounds/autoadd+repo:Metastruct/garrysmod-chatsounds&access_token=${apiGithub}`
   let { body } = await got(url, {
     headers: { 'User-Agent': 'Jibril' },
-    query: {
-      q: query.trim() + '+in:path+extension:ogg+path:sound/chatsounds/autoadd+repo:Metastruct/garrysmod-chatsounds',
-      access_token: apiGithub
-    },
     json: true
   })
   if (!body.total_count) return
