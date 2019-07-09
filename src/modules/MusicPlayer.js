@@ -93,11 +93,7 @@ MusicPlayer.prototype.play = async function (query, author) {
         disp = this.connection.playFile(item.url)
         break
       }
-      case 'url': {
-        disp = this.connection.playArbitraryInput(item.url)
-        break
-      }
-      case 'radio': {
+      case 'url': case 'radio': {
         disp = this.connection.playArbitraryInput(item.url)
         break
       }
@@ -276,23 +272,29 @@ async function searchYT (query) {
   if (playlistId && playlistId.length < 12) playlistId = null
   if (playlistId) {
     let item = await getYTPlaylistVids(playlistId)
+    item = await addYTDuration(item)
     return item
   } else {
     try {
       let { body } = await got(url, { query: payload, json: true })
       if (!body.items.length) return null
       let item = body.items[0]
-      let thumbnail = 'https://i.imgur.com/WBB1NVX.jpg'
+      let thumbnail = null
       if (item.snippet.thumbnails) {
         let keys = Object.keys(item.snippet.thumbnails)
         thumbnail = item.snippet.thumbnails[keys[keys.length - 1]].url
       }
-      return {
+      if (!thumbnail) return null
+      let id = item.id.videoId || item.id
+      let res = {
+        id: id,
         type: 'yt',
         title: item.snippet.title,
-        url: 'https://youtube.com/watch?v=' + (item.id.videoId || item.id),
+        url: 'https://youtube.com/watch?v=' + id,
         img: thumbnail
       }
+      res = await addYTDuration(res)
+      return res
     } catch (e) {
       if (e) {
         if (e.response.body.error.code === 403) return { error: 'Exceeded quota.' }
@@ -300,6 +302,51 @@ async function searchYT (query) {
       }
     }
   }
+}
+
+async function addYTDuration (item) {
+  try {
+    let url = 'https://www.googleapis.com/youtube/v3/videos'
+    let total = 0
+    if (item.playlist) {
+      let ids = item.items.map(x => x.id)
+      let getDuration = async (ids, arr = []) => {
+        let part = ids.splice(0, 50)
+        let { body } = await got(url, {
+          query: {
+            part: 'contentDetails',
+            id: part.join(','),
+            fields: 'items/contentDetails/duration',
+            key: apiGoogle
+          },
+          json: true
+        })
+        total += body.items.map(x => formatYTTime(x.contentDetails.duration)).reduce((a, b) => a + b)
+        let times = body.items.map(x => formatTime(formatYTTime(x.contentDetails.duration)))
+        arr.push(...times)
+        if (ids.length) arr = await getDuration(ids, arr)
+        return arr
+      }
+      let durations = await getDuration(ids)
+      item.items = item.items.map(x => {
+        x.duration = durations.shift()
+        return x
+      })
+      item.playlist.duration = formatTime(total)
+    } else {
+      let { body } = await got(url, {
+        query: {
+          part: 'contentDetails',
+          id: item.id,
+          fields: 'items/contentDetails/duration',
+          key: apiGoogle
+        },
+        json: true
+      })
+      item.duration = formatTime(formatYTTime(body.items[0].contentDetails.duration))
+    }
+    return item
+  } catch (e) { return item }
 }
 
 async function getYTPlaylistVids (id) {
@@ -320,12 +367,14 @@ async function getYTPlaylistVids (id) {
     if (!body.items.length) return
     for (let i = 0; i < body.items.length; i++) {
       let item = body.items[i]
-      let thumbnail = 'https://i.imgur.com/WBB1NVX.jpg'
+      let thumbnail = null
       if (item.snippet.thumbnails) {
         let keys = Object.keys(item.snippet.thumbnails)
         thumbnail = item.snippet.thumbnails[keys[keys.length - 1]].url
       }
+      if (!thumbnail) continue
       res.push({
+        id: item.snippet.resourceId.videoId,
         type: 'yt',
         title: item.snippet.title,
         url: 'https://youtube.com/watch?v=' + item.snippet.resourceId.videoId,
@@ -335,7 +384,6 @@ async function getYTPlaylistVids (id) {
     next = body.nextPageToken
   } while (next)
 
-  let info = null
   try {
     let url = 'https://www.googleapis.com/youtube/v3/playlists'
     let { body } = await got(url, {
@@ -354,14 +402,15 @@ async function getYTPlaylistVids (id) {
       let keys = Object.keys(item.snippet.thumbnails)
       thumbnail = item.snippet.thumbnails[keys[keys.length - 1]].url
     }
-    info = {
-      id: item.id,
-      title: item.snippet.title,
-      url: 'https://www.youtube.com/playlist?list=' + item.id,
-      img: thumbnail
+    return {
+      playlist: {
+        title: item.snippet.title,
+        url: 'https://www.youtube.com/playlist?list=' + item.id,
+        img: thumbnail
+      },
+      items: res
     }
   } catch (e) { if (e) return null }
-  return { playlist: info, items: res }
 }
 
 async function getSongData (url) {
@@ -412,6 +461,16 @@ function getRadioData (url) {
       })
     })
   })
+}
+
+function formatYTTime (duration) {
+  if (!duration) return
+  let match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/)
+  match = match.slice(1).map(x => x ? x.replace(/\D/, '') : x)
+  let hours = (parseInt(match[0]) || 0)
+  let minutes = (parseInt(match[1]) || 0)
+  let seconds = (parseInt(match[2]) || 0)
+  return (hours * 3600 + minutes * 60 + seconds) * 1000
 }
 
 module.exports = MusicPlayer
