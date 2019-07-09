@@ -1,4 +1,4 @@
-let cfg = { token: process.env.TOKEN, key: process.env.KEY, prefix: '>' }
+let cfg = { token: process.env.BOT_TOKEN, prefix: '>' }
 let Discord = require('discord.js')
 let path = require('path')
 let fs = require('fs')
