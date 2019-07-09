@@ -41,7 +41,7 @@ MusicPlayer.prototype.add = async function (query, author) {
       this.queue.push(items[i])
     }
     this.emit('queued', item)
-    return items
+    return item
   } else if (item) {
     item.title = decodeEntities(item.title)
     item.author = authorObj
@@ -125,7 +125,12 @@ MusicPlayer.prototype.last = function () {
 }
 
 MusicPlayer.prototype.get = function (pos) {
+  if (pos === undefined) return this.queue
   return this.queue[Math.abs(pos)]
+}
+
+MusicPlayer.prototype.set = function (queue) {
+  if (queue) this.queue = queue
 }
 
 MusicPlayer.prototype.remove = function (pos) {
