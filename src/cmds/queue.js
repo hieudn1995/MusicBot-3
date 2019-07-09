@@ -2,7 +2,7 @@ module.exports = {
   name: ['queue', 'q'],
   desc: 'View the current queue.',
   permission: [],
-  usage: '(<page>/info)',
+  usage: '(<page>/info/i)',
   args: 0,
   command: async function (msg, cmd, args) {
     let Player = global.getPlayer(msg, true)
@@ -13,6 +13,8 @@ module.exports = {
     let arg = args[0]
     if (!arg || !isNaN(arg)) {
       showQueue(msg, Player, arg)
+    } else if (arg === 'info' || arg === 'i') {
+      showInfo(msg, Player, args[1])
     }
   }
 }
@@ -21,7 +23,7 @@ function showQueue (msg, Player, page) {
   let list = []
   let distance = 15
   let min = page || 0
-  min = parseInt(Math.abs(min))
+  min = Math.abs(parseInt(min))
   let size = Player.size()
   let max = size
   if (!max) return
@@ -51,4 +53,60 @@ function trimSentence (str, limit) {
     str = arr.join(' ') + '...'
   }
   return str
+}
+
+function showInfo (msg, Player, index) {
+  if (index === undefined || isNaN(index)) {
+    let list = []
+    let queue = Player.get()
+    let size = Player.size()
+    let authors = {}
+    for (let i = 0; i < size; i++) {
+      let item = queue[i]
+      if (item.author) {
+        if (!authors.hasOwnProperty(item.author.id)) {
+          authors[item.author.id] = { name: item.author.name, items: [] }
+        }
+        let author = authors[item.author.id]
+        let items = author.items
+        if (author.duration !== '∞') {
+          if (item.duration === '∞') author.duration = '∞'
+          else author.duration += item.duration
+        }
+        items.push(item)
+      } else {
+        if (!authors.hasOwnProperty('none')) authors['none'] = { name: 'None', items: [] }
+        authors['none'].items.push(item)
+      }
+    }
+    for (let id in authors) {
+      let author = authors[id]
+      let len = author.items.length
+      list.push(`${author.name} - ${len} Item${len > 1 ? 's' : ''} (${parseInt(len / size * 100)}%) [${author.duration}]`)
+    }
+    msg.channel.send({
+      embed: {
+        title: 'Queue Info',
+        description: list.join('\r\n')
+      }
+    })
+  } else {
+    let item = Player.get(index)
+    if (!item) {
+      index = Player.size() - 1
+      item = Player.get(index)
+    }
+    msg.channel.send({
+      embed: {
+        title: `Queue Info (Position: ${Math.abs(parseInt(index))})`,
+        url: item.url,
+        description: `\`${item.title}\``,
+        thumbnail: { url: item.img },
+        footer: {
+          icon_url: item.author.avatar,
+          text: `${item.author.name} • ${item.duration}`
+        }
+      }
+    })
+  }
 }

@@ -39,7 +39,41 @@ function shuffleArray (arr) {
   return arr
 }
 
-function shuffleArrayFair (arr) {
-  console.log(arr)
-  return arr
+function shuffleArrayFair (queue) {
+  let authors = {}
+  for (let i = 0; i < queue.length; i++) {
+    let item = queue[i]
+    if (item.author) {
+      if (!authors.hasOwnProperty(item.author.id)) {
+        authors[item.author.id] = { name: item.author.name, items: [] }
+      }
+      let author = authors[item.author.id]
+      let items = author.items
+      if (author.duration !== '∞') {
+        if (item.duration === '∞') author.duration = '∞'
+        else author.duration += item.duration
+      }
+      items.push(item)
+    } else {
+      if (!authors.hasOwnProperty('none')) authors['none'] = { name: 'None', items: [] }
+      authors['none'].items.push(item)
+    }
+  }
+  let items = []
+  for (let id in authors) {
+    let author = authors[id]
+    author.items = shuffleArray(author.items)
+    items.push(author.items)
+  }
+  let res = []
+  let max = 123456
+  while (items.length > 0) {
+    max--
+    if (max <= 0) return res
+    let rnd = Math.floor(Math.random() * items.length)
+    if (!items[rnd]) continue
+    if (!items[rnd].length) delete items[rnd]
+    else res.push(items[rnd].shift())
+  }
+  return res
 }

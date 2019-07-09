@@ -29,7 +29,8 @@ MusicPlayer.prototype.add = async function (query, author) {
   if (author) {
     authorObj = {
       name: `${author.username}#${author.discriminator}`,
-      avatar: `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.png`
+      avatar: `https://cdn.discordapp.com/avatars/${author.id}/${author.avatar}.png`,
+      id: author.id
     }
   }
   if (item && item.playlist) {
@@ -38,6 +39,7 @@ MusicPlayer.prototype.add = async function (query, author) {
       items[i].title = decodeEntities(items[i].title)
       items[i].author = authorObj
       items[i].timestamp = Date.now()
+      items[i].duration = '∞'
       this.queue.push(items[i])
     }
     this.emit('queued', item)
@@ -46,6 +48,7 @@ MusicPlayer.prototype.add = async function (query, author) {
     item.title = decodeEntities(item.title)
     item.author = authorObj
     item.timestamp = Date.now()
+    item.duration = '∞'
     if (this.queue.length) this.emit('queued', item)
     this.queue.push(item)
   }
@@ -71,7 +74,6 @@ MusicPlayer.prototype.play = async function (query, author) {
   if (!this.playing && this.queue.length) {
     let item = await this.first()
     let disp = null
-    if (!item.duration) item.duration = '∞'
     switch (item.type) {
       case 'yt': {
         let stream = ytdl(item.url, { filter: 'audioonly' })
@@ -126,7 +128,8 @@ MusicPlayer.prototype.last = function () {
 
 MusicPlayer.prototype.get = function (pos) {
   if (pos === undefined) return this.queue
-  return this.queue[Math.abs(pos)]
+  pos = Math.abs(parseInt(pos))
+  return this.queue[pos]
 }
 
 MusicPlayer.prototype.set = function (queue) {
@@ -134,7 +137,9 @@ MusicPlayer.prototype.set = function (queue) {
 }
 
 MusicPlayer.prototype.remove = function (pos) {
-  return this.queue.splice(Math.abs(pos), 1)
+  if (pos === undefined) return
+  pos = Math.abs(parseInt(pos))
+  return this.queue.splice(pos, 1)
 }
 
 MusicPlayer.prototype.size = function () {
