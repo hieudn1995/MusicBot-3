@@ -30,9 +30,10 @@ module.exports = {
 async function getRadio (type) {
   type = type.toLowerCase()
   if (radios.hasOwnProperty(type)) {
+    let index = keys.map(x => x.toLowerCase()).indexOf(type)
     return {
       type: 'radio',
-      title: keys[radios.indexOf(type)] + ' Radio',
+      title: keys[index] + ' Radio',
       url: radios[type]
     }
   } else return null
