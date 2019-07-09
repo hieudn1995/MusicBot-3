@@ -10,7 +10,7 @@ module.exports = {
       msg.channel.send("You're not in a voice channel!")
       return
     }
-    let item = await Player.play(args.join(' '), msg.author)
+    let item = await Player.play(args.join(' ').trim(), msg.author)
     if (!item) msg.channel.send('Nothing found!')
     else if (item.error) msg.channel.send(item.error)
     else if (Player.playing) Player.msgQueued(msg, item)
