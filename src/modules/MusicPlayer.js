@@ -2,7 +2,7 @@ let got = require('got')
 let icy = require('icy')
 let ytdl = require('ytdl-core')
 let Event = require('events')
-let key = process.env.KEY
+let apiGoogle = process.env.API_GOOGLE
 
 class MusicPlayer extends Event {
   constructor (msg) {
@@ -183,7 +183,7 @@ async function searchYT (query) {
     part: 'snippet',
     type: 'video',
     maxResults: 1,
-    key: key,
+    key: apiGoogle,
     q: query
   }
   if (ytdl.validateURL(query) || ytdl.validateID(query)) {
@@ -233,7 +233,7 @@ async function getYTPlaylistVids (id) {
         pageToken: next,
         maxResults: 50,
         playlistId: id,
-        key: key
+        key: apiGoogle
       },
       json: true
     })
@@ -263,7 +263,7 @@ async function getYTPlaylistVids (id) {
         part: 'snippet',
         maxResults: 1,
         playlistId: id,
-        key: key,
+        key: apiGoogle,
         id: id
       },
       json: true

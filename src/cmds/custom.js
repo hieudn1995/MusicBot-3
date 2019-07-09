@@ -1,5 +1,5 @@
 let got = require('got')
-let apiGithub = process.env.GIT
+let apiGithub = process.env.API_GITHUB
 
 module.exports = {
   name: ['sound', 'snd'],
