@@ -3,6 +3,7 @@ let icy = require('icy')
 let ytdl = require('ytdl-core')
 let Event = require('events')
 let apiGoogle = process.env.API_GOOGLE
+let apiSoundCloud = process.env.API_SOUNDCLOUD
 
 class MusicPlayer extends Event {
   constructor (msg) {
@@ -20,11 +21,13 @@ MusicPlayer.prototype.add = async function (query, author) {
   if (query && !query.type) {
     if (['.mp3', '.mp4', '.ogg', '.wav', '.flac', '.webm'].some(x => query.endsWith(x)) && query.startsWith('http')) {
       item = await getSongData(query)
+    } else if (query.indexOf('soundcloud.com/') >= 0) {
+      item = await searchSC(query)
     } else {
       item = await searchYT(query)
-      if (item && item.error) return item
     }
   } else item = query
+  if (item && item.error) return item
   let authorObj = null
   if (author) {
     authorObj = {
@@ -35,11 +38,12 @@ MusicPlayer.prototype.add = async function (query, author) {
   }
   if (item && item.playlist) {
     let items = item.items
+    if (!item.playlist.duration) item.playlist.duration = '∞'
     for (let i = 0; i < items.length; i++) {
       items[i].title = decodeEntities(items[i].title)
       items[i].author = authorObj
       items[i].timestamp = Date.now()
-      items[i].duration = '∞'
+      if (!items[i].duration) items[i].duration = '∞'
       this.queue.push(items[i])
     }
     this.emit('queued', item)
@@ -48,7 +52,7 @@ MusicPlayer.prototype.add = async function (query, author) {
     item.title = decodeEntities(item.title)
     item.author = authorObj
     item.timestamp = Date.now()
-    item.duration = '∞'
+    if (!item.duration) item.duration = '∞'
     if (this.queue.length) this.emit('queued', item)
     this.queue.push(item)
   }
@@ -97,6 +101,7 @@ MusicPlayer.prototype.play = async function (query, author) {
         break
       }
     }
+    if (!disp) return
     disp.on('start', () => {
       this.connection.player.streamingData.pausedTime = 0
       this.playing = true
@@ -185,6 +190,51 @@ MusicPlayer.prototype.volume = function (value) {
 MusicPlayer.prototype.time = function () {
   if (!this.connection) return '0:00'
   return formatTime(this.connection.dispatcher.time)
+}
+
+async function searchSC (query) {
+  let url = 'http://api.soundcloud.com/resolve.json'
+  try {
+    let { body } = await got(url, {
+      query: {
+        url: query,
+        client_id: apiSoundCloud
+      },
+      json: true
+    })
+    if (body.kind === 'track') {
+      return {
+        type: 'url',
+        title: body.title,
+        duration: formatTime(body.duration),
+        img: body.artwork_url,
+        url: body.stream_url + '?client_id=' + apiSoundCloud,
+        link: body.permalink_url
+      }
+    } else if (body.kind === 'playlist') {
+      let items = []
+      for (let i = 0; i < body.tracks.length; i++) {
+        let item = body.tracks[i]
+        items.push({
+          type: 'url',
+          title: item.title,
+          duration: formatTime(item.duration),
+          img: item.artwork_url,
+          url: item.stream_url + '?client_id=' + apiSoundCloud,
+          link: item.permalink_url
+        })
+      }
+      return {
+        playlist: {
+          title: body.title,
+          url: body.permalink_url,
+          img: body.artwork_url,
+          duration: formatTime(body.duration)
+        },
+        items: items
+      }
+    }
+  } catch (e) { return null }
 }
 
 async function searchYT (query) {

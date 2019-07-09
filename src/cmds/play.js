@@ -13,6 +13,6 @@ module.exports = {
     let item = await Player.play(args.join(' ').trim(), msg.author)
     if (!item) msg.channel.send('Nothing found!')
     else if (item.error) msg.channel.send(item.error)
-    else if (Player.playing) Player.msgQueued(msg, item)
+    else if (item.playlist || Player.playing) Player.msgQueued(msg, item)
   }
 }

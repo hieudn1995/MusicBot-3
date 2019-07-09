@@ -15,9 +15,9 @@ module.exports = {
       msg.channel.send({
         embed: {
           title: 'Listening to ' + item.radio.name,
-          url: item.url,
+          url: item.link || item.url,
           description: `\`${item.radio.song}\``,
-          image: { url: item.img },
+          thumbnail: { url: item.img },
           footer: {
             icon_url: item.author.avatar,
             text: `${item.author.name} • ${Player.time()}/${item.duration}`
@@ -28,9 +28,9 @@ module.exports = {
       msg.channel.send({
         embed: {
           title: 'Now Playing',
-          url: item.url,
+          url: item.link || item.url,
           description: `\`${item.title}\``,
-          image: { url: item.img },
+          thumbnail: { url: item.img },
           footer: {
             icon_url: item.author.avatar,
             text: `${item.author.name} • ${Player.time()}/${item.duration}`

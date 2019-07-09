@@ -17,12 +17,12 @@ global.getPlayer = (msg, checkOnly) => {
       org.channel.send({
         embed: {
           title: 'Now Playing',
-          url: item.url,
+          url: item.link || item.url,
           description: `\`${item.title}\``,
           thumbnail: { url: item.img },
           footer: {
             icon_url: item.author.avatar,
-            text: `${item.author.name} • ${Player.time()}/${item.duration}`
+            text: `${item.author.name} • ${item.duration}`
           }
         }
       })
@@ -36,24 +36,22 @@ global.getPlayer = (msg, checkOnly) => {
             url: item.playlist.url,
             description: `\`${item.playlist.title}\``,
             thumbnail: { url: item.playlist.img },
-            timestamp: items[0].timestamp,
             footer: {
               icon_url: items[0].author.avatar,
-              text: items[0].author.name
+              text: `${items[0].author.name} • ${item.playlist.duration}`
             }
           }
         })
       } else {
         org.channel.send({
           embed: {
-            title: 'Added To Queue',
-            url: item.url,
+            title: `Added To Queue`,
+            url: item.link || item.url,
             description: `\`${item.title}\``,
             thumbnail: { url: item.img },
-            timestamp: item.timestamp,
             footer: {
               icon_url: item.author.avatar,
-              text: item.author.name
+              text: `${item.author.name} • ${item.duration}`
             }
           }
         })

@@ -49,10 +49,6 @@ function shuffleArrayFair (queue) {
       }
       let author = authors[item.author.id]
       let items = author.items
-      if (author.duration !== '∞') {
-        if (item.duration === '∞') author.duration = '∞'
-        else author.duration += item.duration
-      }
       items.push(item)
     } else {
       if (!authors.hasOwnProperty('none')) authors['none'] = { name: 'None', items: [] }

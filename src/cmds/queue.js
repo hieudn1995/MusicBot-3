@@ -69,10 +69,6 @@ function showInfo (msg, Player, index) {
         }
         let author = authors[item.author.id]
         let items = author.items
-        if (author.duration !== '∞') {
-          if (item.duration === '∞') author.duration = '∞'
-          else author.duration += item.duration
-        }
         items.push(item)
       } else {
         if (!authors.hasOwnProperty('none')) authors['none'] = { name: 'None', items: [] }
@@ -82,7 +78,7 @@ function showInfo (msg, Player, index) {
     for (let id in authors) {
       let author = authors[id]
       let len = author.items.length
-      list.push(`${author.name} - ${len} Item${len > 1 ? 's' : ''} (${parseInt(len / size * 100)}%) [${author.duration}]`)
+      list.push(`${author.name} - ${len} Item${len > 1 ? 's' : ''} (${parseInt(len / size * 100)}%)`)
     }
     msg.channel.send({
       embed: {
@@ -99,7 +95,7 @@ function showInfo (msg, Player, index) {
     msg.channel.send({
       embed: {
         title: `Queue Info (Position: ${Math.abs(parseInt(index))})`,
-        url: item.url,
+        url: item.link || item.url,
         description: `\`${item.title}\``,
         thumbnail: { url: item.img },
         footer: {
