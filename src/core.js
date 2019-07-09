@@ -74,6 +74,11 @@ bot.on('message', async msg => {
   handleCommand(msg, cmd, args)
 })
 
+process.on('SIGINT', () => {
+  bot.destroy()
+  process.exit()
+})
+
 function handleCommand (msg, cmd, args) {
   let files = getFileData(path.join(__dirname, 'cmds'))
   for (let i = 0; i < files.length; i++) {
