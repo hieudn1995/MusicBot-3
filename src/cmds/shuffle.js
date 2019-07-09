@@ -67,10 +67,13 @@ function shuffleArrayFair (queue) {
   }
   let res = []
   let max = 123456
+  let last = null
   while (items.length > 0) {
     max--
     if (max <= 0) return res
     let rnd = Math.floor(Math.random() * items.length)
+    if (items.length > 1 && last === rnd) rnd >= items.length ? rnd-- : rnd++
+    last = rnd
     if (!items[rnd]) continue
     if (!items[rnd].length) delete items[rnd]
     else res.push(items[rnd].shift())
