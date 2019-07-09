@@ -13,6 +13,7 @@ class MusicPlayer extends Event {
     this.connection = null
     this.queue = []
     this.playing = false
+    this.looping = false
   }
 }
 
@@ -46,14 +47,14 @@ MusicPlayer.prototype.add = async function (query, author) {
       if (!items[i].duration) items[i].duration = '∞'
       this.queue.push(items[i])
     }
-    this.emit('queued', item)
+    this.emit('queue', item)
     return item
   } else if (item) {
     item.title = decodeEntities(item.title)
     item.author = authorObj
     item.timestamp = Date.now()
     if (!item.duration) item.duration = '∞'
-    if (this.queue.length) this.emit('queued', item)
+    if (this.queue.length) this.emit('queue', item)
     this.queue.push(item)
   }
   return item
@@ -105,10 +106,10 @@ MusicPlayer.prototype.play = async function (query, author) {
     disp.on('start', () => {
       this.connection.player.streamingData.pausedTime = 0
       this.playing = true
-      this.emit('playing', item)
+      this.emit('play', item)
     })
     disp.on('end', () => {
-      this.queue.shift()
+      if (!this.looping) this.queue.shift()
       this.playing = false
       if (this.queue.length) {
         setTimeout(() => this.play(), 1500)
@@ -155,7 +156,7 @@ MusicPlayer.prototype.skip = function () {
   if (this.connection) {
     if (this.connection.dispatcher) {
       this.connection.dispatcher.end()
-      this.emit('skipped')
+      this.emit('skip')
     }
   }
 }
@@ -165,10 +166,28 @@ MusicPlayer.prototype.pause = function () {
     if (this.connection.dispatcher) {
       if (this.connection.dispatcher.paused) {
         this.connection.dispatcher.resume()
-        this.emit('paused', false)
+        this.emit('pause', false)
+        return false
       } else {
         this.connection.dispatcher.pause()
-        this.emit('paused', true)
+        this.emit('pause', true)
+        return true
+      }
+    }
+  }
+}
+
+MusicPlayer.prototype.loop = function () {
+  if (this.connection) {
+    if (this.connection.dispatcher) {
+      if (this.looping) {
+        this.looping = false
+        this.emit('loop', false)
+        return false
+      } else {
+        this.looping = true
+        this.emit('loop', true)
+        return true
       }
     }
   }
@@ -179,6 +198,7 @@ MusicPlayer.prototype.reset = function () {
   if (this.connection) this.connection.channel.leave()
   this.connection = null
   this.playing = false
+  this.looping = false
   this.emit('reset')
 }
 

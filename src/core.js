@@ -57,7 +57,7 @@ global.getPlayer = (msg, checkOnly) => {
         })
       }
     }
-    Player.on('playing', item => Player.msgPlaying(Player.msg, item))
+    Player.on('play', item => Player.msgPlaying(Player.msg, item))
     global.Player[msg.guild.id] = Player
     return Player
   }
