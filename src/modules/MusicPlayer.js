@@ -22,7 +22,7 @@ MusicPlayer.prototype.add = async function (query, author) {
       item = await getSongData(query)
     } else {
       item = await searchYT(query)
-      if (item.error) return item
+      if (item && item.error) return item
     }
   } else item = query
   let authorObj = null
