@@ -66,11 +66,14 @@ function showInfo (msg, Player, index) {
       let item = queue[i]
       if (item.author) {
         if (!authors.hasOwnProperty(item.author.id)) {
-          authors[item.author.id] = { name: item.author.name, items: [] }
+          authors[item.author.id] = { name: item.author.name, items: [], duration: 0 }
         }
         let author = authors[item.author.id]
-        let items = author.items
-        items.push(item)
+        if (author.duration !== '∞') {
+          if (item.duration !== '∞') author.duration += hmsToMs(item.duration)
+          else author.duration = '∞'
+        }
+        author.items.push(item)
       } else {
         if (!authors.hasOwnProperty('none')) authors['none'] = { name: 'None', items: [] }
         authors['none'].items.push(item)
@@ -79,7 +82,7 @@ function showInfo (msg, Player, index) {
     for (let id in authors) {
       let author = authors[id]
       let len = author.items.length
-      list.push(`${author.name} - ${len} Item${len > 1 ? 's' : ''} (${parseInt(len / size * 100)}%)`)
+      list.push(`${author.name} - ${len} Item${len > 1 ? 's' : ''} (${parseInt(len / size * 100)}%) [${formatTime(author.duration)}]`)
     }
     msg.channel.send({
       embed: {
@@ -108,4 +111,28 @@ function showInfo (msg, Player, index) {
       }
     })
   }
+}
+
+function hmsToMs (str) {
+  let p = str.split(':')
+  let s = 0
+  let m = 1
+  while (p.length > 0) {
+    s += m * parseInt(p.pop(), 10)
+    m *= 60
+  }
+  return s * 1000
+}
+
+function formatTime (ms) {
+  if (ms === '∞') return ms
+  let t = new Date(ms).toISOString().substr(11, 8).split(':')
+  let h = Math.floor(ms / 1000 / 60 / 60).toString()
+  if (h > 23) t[0] = h
+  while (t.length > 2 && t[0] === '00' && t[1].startsWith('0')) {
+    t.shift()
+  }
+  if (t.length > 2 && t[0] === '00') t.shift()
+  if (t[0].startsWith('0')) t[0] = t[0].substr(1)
+  return t.join(':')
 }
