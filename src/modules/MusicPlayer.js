@@ -14,6 +14,7 @@ class MusicPlayer extends Event {
     this.connection = null
     this.queue = []
     this.playing = false
+    this.active = false
     this.looping = false
     this.msgPlaying = (org, item) => {
       if (item.radio) {
@@ -165,6 +166,7 @@ MusicPlayer.prototype.play = async function (query, author) {
     if (!disp) return
     disp.on('start', () => {
       this.connection.player.streamingData.pausedTime = 0
+      this.active = true
       this.playing = true
       this.emit('play', item)
     })
@@ -173,7 +175,10 @@ MusicPlayer.prototype.play = async function (query, author) {
       this.playing = false
       if (this.queue.length) {
         setTimeout(() => this.play(), 1500)
-      } else this.emit('end')
+      } else {
+        this.active = false
+        this.emit('end')
+      }
     })
   }
   return song
@@ -258,6 +263,7 @@ MusicPlayer.prototype.reset = function () {
   if (this.connection) this.connection.channel.leave()
   this.connection = null
   this.playing = false
+  this.active = false
   this.looping = false
   this.emit('reset')
 }
@@ -268,7 +274,7 @@ MusicPlayer.prototype.volume = function (value) {
 }
 
 MusicPlayer.prototype.time = function () {
-  if (!this.connection) return '0:00'
+  if (!this.connection || !this.connection.dispatcher) return '0:00'
   return formatTime(this.connection.dispatcher.time)
 }
 
