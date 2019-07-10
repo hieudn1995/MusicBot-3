@@ -210,7 +210,7 @@ MusicPlayer.prototype.set = function (queue) {
 MusicPlayer.prototype.remove = function (pos) {
   if (pos === undefined) return
   pos = Math.abs(parseInt(pos))
-  return this.queue.splice(pos, 1)
+  return this.queue.splice(pos, 1)[0]
 }
 
 MusicPlayer.prototype.size = function () {

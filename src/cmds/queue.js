@@ -1,8 +1,8 @@
 module.exports = {
   name: ['queue', 'q'],
-  desc: 'View the current queue.',
+  desc: 'Manipulate the current queue!',
   permission: [],
-  usage: '(<page>/info/i)',
+  usage: '(<page>/[info/i]/[remove/rem/r]) (<index>)',
   args: 0,
   command: async function (msg, cmd, args) {
     let Player = global.getPlayer(msg, true)
@@ -15,6 +15,8 @@ module.exports = {
       showQueue(msg, Player, arg)
     } else if (arg === 'info' || arg === 'i') {
       showInfo(msg, Player, args[1])
+    } else if (arg === 'remove' || arg === 'rem' || arg === 'r') {
+      removeItem(msg, Player, args[1])
     }
   }
 }
@@ -38,9 +40,12 @@ function showQueue (msg, Player, page) {
   }
   if (min > 0) list.unshift(`> ${min}`)
   if (max !== size) list.push(`> ${size - max}`)
+
+  let times = Player.get().map(x => x.duration)
+  let duration = times.includes('∞') ? '∞' : times.map(x => hmsToMs(x)).reduce((a, b) => a + b, 0)
   msg.channel.send({
     embed: {
-      title: `Queue (${size} Item${size > 1 ? 's' : ''})`,
+      title: `Queue (${size} Item${size > 1 ? 's' : ''}) [${formatTime(duration)}]`,
       color: Player.color,
       description: list.join('\r\n')
     }
@@ -110,6 +115,23 @@ function showInfo (msg, Player, index) {
         }
       }
     })
+  }
+}
+
+function removeItem (msg, Player, index) {
+  let size = Player.size()
+  if (!isNaN(index) || index === 'last' || index === 'l') {
+    if (index === 'last' || index === 'l') index = size - 1
+    index = parseInt(index)
+    if (index >= size || index < 1) {
+      msg.channel.send(`Index must be between 1 - ${size - 1}.`)
+    } else {
+      let item = Player.remove(index)
+      if (!item) msg.channel.send('Something went wrong!')
+      else msg.channel.send(`Removed \`${item.title}\` from queue.`)
+    }
+  } else {
+    msg.channel.send('Please enter an index to remove!')
   }
 }
 
