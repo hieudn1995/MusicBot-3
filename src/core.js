@@ -12,51 +12,7 @@ global.getPlayer = (msg, checkOnly) => {
   if (Player.hasOwnProperty(msg.guild.id)) return Player[msg.guild.id]
   else {
     if (!msg.member.voiceChannel) return null
-    let Player = new MusicPlayer(msg)
-    Player.msgPlaying = (org, item) => {
-      org.channel.send({
-        embed: {
-          title: 'Now Playing',
-          url: item.link || item.url,
-          description: `\`${item.title}\``,
-          thumbnail: { url: item.img },
-          footer: {
-            icon_url: item.author.avatar,
-            text: `${item.author.name} • ${item.duration}`
-          }
-        }
-      })
-    }
-    Player.msgQueued = (org, item) => {
-      if (item.playlist) {
-        let items = item.items
-        org.channel.send({
-          embed: {
-            title: `Added ${items.length} Item${items.length > 1 ? 's' : ''} to Queue`,
-            url: item.playlist.url,
-            description: `\`${item.playlist.title}\``,
-            thumbnail: { url: item.playlist.img },
-            footer: {
-              icon_url: items[0].author.avatar,
-              text: `${items[0].author.name} • ${item.playlist.duration}`
-            }
-          }
-        })
-      } else {
-        org.channel.send({
-          embed: {
-            title: `Added To Queue`,
-            url: item.link || item.url,
-            description: `\`${item.title}\``,
-            thumbnail: { url: item.img },
-            footer: {
-              icon_url: item.author.avatar,
-              text: `${item.author.name} • ${item.duration}`
-            }
-          }
-        })
-      }
-    }
+    let Player = new MusicPlayer(msg, 4360181)
     Player.on('play', item => Player.msgPlaying(Player.msg, item))
     global.Player[msg.guild.id] = Player
     return Player

@@ -41,6 +41,7 @@ function showQueue (msg, Player, page) {
   msg.channel.send({
     embed: {
       title: `Queue (${size} Item${size > 1 ? 's' : ''})`,
+      color: Player.color,
       description: list.join('\r\n')
     }
   })
@@ -83,6 +84,7 @@ function showInfo (msg, Player, index) {
     msg.channel.send({
       embed: {
         title: 'Queue Info',
+        color: Player.color,
         description: list.join('\r\n')
       }
     })
@@ -95,6 +97,7 @@ function showInfo (msg, Player, index) {
     msg.channel.send({
       embed: {
         title: `Queue Info (Position: ${Math.abs(parseInt(index))})`,
+        color: Player.color,
         url: item.link || item.url,
         description: `\`${item.title}\``,
         thumbnail: { url: item.img },

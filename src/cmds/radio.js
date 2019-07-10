@@ -12,7 +12,7 @@ module.exports = {
       return
     }
     let query = args.join(' ')
-    if (query === 'list') printList(msg)
+    if (query === 'list') printList(Player, msg)
     else {
       let radio = await getRadio(query)
       if (!radio) {
@@ -39,12 +39,13 @@ async function getRadio (type) {
   } else return null
 }
 
-function printList (msg) {
+function printList (Player, msg) {
   let radiolist = []
   for (let i = 0; i < keys.length; i++) radiolist.push(`\`${keys[i]}\``)
   msg.channel.send({
     embed: {
       title: `Radio Channels (${radiolist.length})`,
+      color: Player.color,
       description: radiolist.join(' | ')
     }
   })

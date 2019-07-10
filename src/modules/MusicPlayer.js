@@ -6,14 +6,78 @@ let apiGoogle = process.env.API_GOOGLE
 let apiSoundCloud = process.env.API_SOUNDCLOUD
 
 class MusicPlayer extends Event {
-  constructor (msg) {
+  constructor (msg, color) {
     super()
+    this.color = color || null
     this.msg = msg
     this.channel = msg.member.voiceChannel
     this.connection = null
     this.queue = []
     this.playing = false
     this.looping = false
+    this.msgPlaying = (org, item) => {
+      if (item.radio) {
+        org.channel.send({
+          embed: {
+            title: 'Listening to ' + item.radio.name,
+            color: this.color,
+            url: item.link || item.url,
+            description: `\`${item.radio.song}\``,
+            thumbnail: { url: item.img },
+            footer: {
+              icon_url: item.author.avatar,
+              text: `${item.author.name} • ${this.time()}/${item.duration}`
+            }
+          }
+        })
+      } else {
+        org.channel.send({
+          embed: {
+            title: 'Now Playing',
+            color: this.color,
+            url: item.link || item.url,
+            description: `\`${item.title}\``,
+            thumbnail: { url: item.img },
+            footer: {
+              icon_url: item.author.avatar,
+              text: `${item.author.name} • ${this.time()}/${item.duration}`
+            }
+          }
+        })
+      }
+    }
+    this.msgQueued = (org, item) => {
+      if (item.playlist) {
+        let items = item.items
+        org.channel.send({
+          embed: {
+            title: `Added ${items.length} Item${items.length > 1 ? 's' : ''} to Queue`,
+            color: this.color,
+            url: item.playlist.url,
+            description: `\`${item.playlist.title}\``,
+            thumbnail: { url: item.playlist.img },
+            footer: {
+              icon_url: items[0].author.avatar,
+              text: `${items[0].author.name} • ${item.playlist.duration}`
+            }
+          }
+        })
+      } else {
+        org.channel.send({
+          embed: {
+            title: `Added To Queue`,
+            color: this.color,
+            url: item.link || item.url,
+            description: `\`${item.title}\``,
+            thumbnail: { url: item.img },
+            footer: {
+              icon_url: item.author.avatar,
+              text: `${item.author.name} • ${item.duration}`
+            }
+          }
+        })
+      }
+    }
   }
 }
 
