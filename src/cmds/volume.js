@@ -1,6 +1,6 @@
 module.exports = {
-  name: ['skip', 'next', 'n'],
-  desc: 'Skip current song in queue.',
+  name: ['volume', 'vol', 'v'],
+  desc: 'Change overall volume.',
   permission: [],
   usage: '',
   args: 0,
