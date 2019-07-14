@@ -70,7 +70,7 @@ function showInfo (msg, Player, index) {
     for (let i = 0; i < size; i++) {
       let item = queue[i]
       if (item.author) {
-        if (!authors.hasOwnProperty(item.author.id)) {
+        if (!Object.prototype.hasOwnProperty.call(authors, item.author.id)) {
           authors[item.author.id] = { name: item.author.name, items: [], duration: 0 }
         }
         let author = authors[item.author.id]
@@ -80,7 +80,7 @@ function showInfo (msg, Player, index) {
         }
         author.items.push(item)
       } else {
-        if (!authors.hasOwnProperty('none')) authors['none'] = { name: 'None', items: [] }
+        if (!Object.prototype.hasOwnProperty.call(authors, 'none')) authors['none'] = { name: 'None', items: [] }
         authors['none'].items.push(item)
       }
     }

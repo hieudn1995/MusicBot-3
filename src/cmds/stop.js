@@ -11,6 +11,6 @@ module.exports = {
       return
     }
     await Player.reset()
-    if (global.Player.hasOwnProperty(msg.guild.id)) delete global.Player[msg.guild.id]
+    if (Object.prototype.hasOwnProperty.call(global.Player, msg.guild.id)) delete global.Player[msg.guild.id]
   }
 }

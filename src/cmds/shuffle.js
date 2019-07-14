@@ -44,14 +44,14 @@ function shuffleArrayFair (queue) {
   for (let i = 0; i < queue.length; i++) {
     let item = queue[i]
     if (item.author) {
-      if (!authors.hasOwnProperty(item.author.id)) {
+      if (!Object.prototype.hasOwnProperty.call(authors, item.author.id)) {
         authors[item.author.id] = { name: item.author.name, items: [] }
       }
       let author = authors[item.author.id]
       let items = author.items
       items.push(item)
     } else {
-      if (!authors.hasOwnProperty('none')) authors['none'] = { name: 'None', items: [] }
+      if (!Object.prototype.hasOwnProperty.call(authors, 'none')) authors['none'] = { name: 'None', items: [] }
       authors['none'].items.push(item)
     }
   }

@@ -29,7 +29,7 @@ module.exports = {
 
 async function getRadio (type) {
   type = type.toLowerCase()
-  if (radios.hasOwnProperty(type)) {
+  if (Object.prototype.hasOwnProperty.call(radios, type)) {
     let index = keys.map(x => x.toLowerCase()).indexOf(type)
     return {
       type: 'radio',
@@ -56,8 +56,8 @@ let radios = {
   'WDR Cosmo': 'https://dg-wdr-https-dus-dtag-cdn.sslcast.addradio.de/wdr/cosmo/live/mp3/128/stream.mp3',
   'listen.moe': 'https://listen.moe/opus',
   'listen.moe kpop': 'https://listen.moe/kpop/opus',
-  'AnimeRadio': 'http://stream.animeradio.de/animeradio.mp3',
-  'Chillsky': 'http://hyades.shoutca.st:8043/stream',
+  AnimeRadio: 'http://stream.animeradio.de/animeradio.mp3',
+  Chillsky: 'http://hyades.shoutca.st:8043/stream',
   'osu!station': 'http://net.web.yas-online.net:8000/osustation'
 }
 let keys = Object.keys(radios).sort()

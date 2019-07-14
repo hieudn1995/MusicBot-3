@@ -8,8 +8,8 @@ let MusicPlayer = require('./modules/MusicPlayer')
 global.Player = {}
 global.getPlayer = (msg, checkOnly) => {
   let Player = global.Player
-  if (checkOnly) return Player.hasOwnProperty(msg.guild.id) && Player[msg.guild.id].connection ? Player[msg.guild.id] : null
-  if (Player.hasOwnProperty(msg.guild.id)) return Player[msg.guild.id]
+  if (checkOnly) return Object.prototype.hasOwnProperty.call(Player, msg.guild.id) && Player[msg.guild.id].connection ? Player[msg.guild.id] : null
+  if (Object.prototype.hasOwnProperty.call(Player, msg.guild.id)) return Player[msg.guild.id]
   else {
     if (!msg.member.voiceChannel) return null
     let Player = new MusicPlayer(msg, 4360181)
