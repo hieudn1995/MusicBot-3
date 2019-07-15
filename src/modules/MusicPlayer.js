@@ -10,7 +10,7 @@ class MusicPlayer extends Event {
     super()
     this.color = color || null
     this.msg = msg
-    this.channel = msg.member.voiceChannel
+    this.channel = msg.member.voice.channel
     this.connection = null
     this.queue = []
     this.playing = false
@@ -79,12 +79,14 @@ class MusicPlayer extends Event {
         })
       }
     }
+    this.on('skip', () => this.next())
   }
 }
 
 MusicPlayer.prototype.add = async function (query, author) {
   let item = null
-  if (query && !query.type) {
+  if (query && query.error) item = { error: query.error }
+  else if (query && !query.type) {
     if (['.mp3', '.mp4', '.ogg', '.wav', '.flac', '.webm'].some(x => query.endsWith(x)) && query.startsWith('http')) {
       item = await getSongData(query)
     } else if (query.indexOf('soundcloud.com/') >= 0) {
@@ -147,19 +149,11 @@ MusicPlayer.prototype.play = async function (query, author) {
     switch (item.type) {
       case 'yt': {
         let stream = ytdl(item.url, { filter: 'audioonly' })
-        disp = this.connection.playStream(stream)
+        disp = this.connection.play(stream)
         break
       }
-      case 'stream': {
-        disp = this.connection.playStream(item.url)
-        break
-      }
-      case 'file': {
-        disp = this.connection.playFile(item.url)
-        break
-      }
-      case 'url': case 'radio': {
-        disp = this.connection.playArbitraryInput(item.url)
+      case 'stream': case 'file': case 'url': case 'radio': {
+        disp = this.connection.play(item.url)
         break
       }
     }
@@ -170,18 +164,20 @@ MusicPlayer.prototype.play = async function (query, author) {
       this.playing = true
       this.emit('play', item)
     })
-    disp.on('end', () => {
-      if (!this.looping) this.queue.shift()
-      this.playing = false
-      if (this.queue.length) {
-        setTimeout(() => this.play(), 1500)
-      } else {
-        this.active = false
-        this.emit('end')
-      }
-    })
+    disp.on('finish', () => this.next())
   }
   return song
+}
+
+MusicPlayer.prototype.next = function () {
+  if (!this.looping) this.queue.shift()
+  this.playing = false
+  if (this.queue.length) {
+    setTimeout(() => this.play(), 1500)
+  } else {
+    this.active = false
+    this.emit('end')
+  }
 }
 
 MusicPlayer.prototype.first = async function () {
@@ -220,7 +216,7 @@ MusicPlayer.prototype.size = function () {
 MusicPlayer.prototype.skip = function () {
   if (this.connection) {
     if (this.connection.dispatcher) {
-      this.connection.dispatcher.end()
+      this.connection.dispatcher.destroy()
       this.emit('skip')
     }
   }
@@ -234,7 +230,7 @@ MusicPlayer.prototype.pause = function () {
         this.emit('pause', false)
         return false
       } else {
-        this.connection.dispatcher.pause()
+        this.connection.dispatcher.pause(true)
         this.emit('pause', true)
         return true
       }
@@ -275,7 +271,7 @@ MusicPlayer.prototype.volume = function (value) {
 
 MusicPlayer.prototype.time = function () {
   if (!this.connection || !this.connection.dispatcher) return '0:00'
-  return formatTime(this.connection.dispatcher.time)
+  return formatTime(this.connection.dispatcher.streamTime)
 }
 
 async function searchSC (query) {
