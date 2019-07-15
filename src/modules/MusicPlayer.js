@@ -1,15 +1,19 @@
 let got = require('got')
 let icy = require('icy')
 let ytdl = require('ytdl-core')
+let ffprobe = require('ffprobe-url')
 let Event = require('events')
 let apiGoogle = process.env.API_GOOGLE
 let apiSoundCloud = process.env.API_SOUNDCLOUD
 
 class MusicPlayer extends Event {
-  constructor (msg, color) {
+  constructor (msg, color, mode) {
     super()
-    this.color = color || null
     this.msg = msg
+    this.color = color || null
+    if (mode === 'mini') this.mode = 1
+    else if (mode === 'silent') this.mode = 2
+    else if (mode === 'hidden') this.mode = 3
     this.channel = msg.member.voice.channel
     this.connection = null
     this.queue = []
@@ -17,66 +21,88 @@ class MusicPlayer extends Event {
     this.active = false
     this.looping = false
     this.msgPlaying = (org, item) => {
+      if (mode === 3) return
       if (item.radio) {
-        org.channel.send({
-          embed: {
-            title: 'Listening to ' + item.radio.name,
-            color: this.color,
-            url: item.link || item.url,
-            description: `\`${item.radio.song}\``,
-            thumbnail: { url: item.img },
-            footer: {
-              icon_url: item.author.avatar,
-              text: `${item.author.name} • ${this.time()}/${item.duration}`
+        let text = `NP: ${item.radio.title} [${this.time()}/${item.duration}]`
+        if (mode === 2) console.log(text)
+        else if (mode === 1) msg.channel.send(text)
+        else {
+          org.channel.send({
+            embed: {
+              title: 'Listening to ' + item.radio.name,
+              color: this.color,
+              url: item.nolink ? undefined : item.link || item.url,
+              description: `\`${item.radio.song}\``,
+              thumbnail: { url: item.img },
+              footer: {
+                icon_url: item.author.avatar,
+                text: `${item.author.name} • ${this.time()}/${item.duration}`
+              }
             }
-          }
-        })
+          })
+        }
       } else {
-        org.channel.send({
-          embed: {
-            title: 'Now Playing',
-            color: this.color,
-            url: item.link || item.url,
-            description: `\`${item.title}\``,
-            thumbnail: { url: item.img },
-            footer: {
-              icon_url: item.author.avatar,
-              text: `${item.author.name} • ${this.time()}/${item.duration}`
+        let text = `NP: ${item.title} [${this.time()}/${item.duration}]`
+        if (mode === 2) console.log(text)
+        else if (mode === 1) msg.channel.send(text)
+        else {
+          org.channel.send({
+            embed: {
+              title: 'Now Playing',
+              color: this.color,
+              url: item.nolink ? undefined : item.link || item.url,
+              description: `\`${item.title}\``,
+              thumbnail: { url: item.img },
+              footer: {
+                icon_url: item.author.avatar,
+                text: `${item.author.name} • ${this.time()}/${item.duration}`
+              }
             }
-          }
-        })
+          })
+        }
       }
     }
     this.msgQueued = (org, item) => {
+      if (mode === 3) return
       if (item.playlist) {
-        let items = item.items
-        org.channel.send({
-          embed: {
-            title: `Added ${items.length} Item${items.length > 1 ? 's' : ''} to Queue`,
-            color: this.color,
-            url: item.playlist.url,
-            description: `\`${item.playlist.title}\``,
-            thumbnail: { url: item.playlist.img },
-            footer: {
-              icon_url: items[0].author.avatar,
-              text: `${items[0].author.name} • ${item.playlist.duration}`
+        let text = `Q: ${item.playlist.title} (${item.items.length}) [${item.playlist.duration}]`
+        if (mode === 2) console.log(text)
+        else if (mode === 1) msg.channel.send(text)
+        else {
+          let items = item.items
+          org.channel.send({
+            embed: {
+              title: `Added ${items.length} Item${items.length > 1 ? 's' : ''} to Queue`,
+              color: this.color,
+              url: item.playlist.url,
+              description: `\`${item.playlist.title}\``,
+              thumbnail: { url: item.playlist.img },
+              footer: {
+                icon_url: items[0].author.avatar,
+                text: `${items[0].author.name} • ${item.playlist.duration}`
+              }
             }
-          }
-        })
+          })
+        }
       } else {
-        org.channel.send({
-          embed: {
-            title: `Added To Queue`,
-            color: this.color,
-            url: item.link || item.url,
-            description: `\`${item.title}\``,
-            thumbnail: { url: item.img },
-            footer: {
-              icon_url: item.author.avatar,
-              text: `${item.author.name} • ${item.duration}`
+        let text = `Q: ${item.title} [${item.duration}]`
+        if (mode === 2) console.log(text)
+        else if (mode === 1) msg.channel.send(text)
+        else {
+          org.channel.send({
+            embed: {
+              title: `Added To Queue`,
+              color: this.color,
+              url: item.nolink ? undefined : item.link || item.url,
+              description: `\`${item.title}\``,
+              thumbnail: { url: item.img },
+              footer: {
+                icon_url: item.author.avatar,
+                text: `${item.author.name} • ${item.duration}`
+              }
             }
-          }
-        })
+          })
+        }
       }
     }
     this.on('skip', () => this.next())
@@ -120,7 +146,19 @@ MusicPlayer.prototype.add = async function (query, author) {
     item.title = decodeEntities(item.title)
     item.author = authorObj
     item.timestamp = Date.now()
-    if (!item.duration) item.duration = '∞'
+    if (!item.duration) {
+      if (item.type === 'radio' || !validURL(item.url)) item.duration = '∞'
+      else {
+        let info = await ffprobe(item.url)
+        if (info.format.tags) {
+          let title = info.format.tags.title
+          let artist = info.format.tags.artist
+          if (title && artist) item.title = `${artist} - ${title}`
+          else if (title) item.title = title
+        }
+        item.duration = formatTime(info.format.duration * 1000)
+      }
+    }
     if (this.queue.length) this.emit('queue', item)
     this.queue.push(item)
   }
@@ -537,6 +575,16 @@ function formatYTTime (duration) {
   let minutes = (parseInt(match[1]) || 0)
   let seconds = (parseInt(match[2]) || 0)
   return (hours * 3600 + minutes * 60 + seconds) * 1000
+}
+
+function validURL (str) {
+  var pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
+    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
+    '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
+    '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
+    '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
+    '(\\#[-a-z\\d_]*)?$', 'i') // fragment locator
+  return !!pattern.test(str)
 }
 
 module.exports = MusicPlayer

@@ -106,7 +106,7 @@ function showInfo (msg, Player, index) {
       embed: {
         title: `Queue Info (Position: ${Math.abs(parseInt(index))})`,
         color: Player.color,
-        url: item.link || item.url,
+        url: item.nolink ? undefined : item.link || item.url,
         description: `\`${item.title}\``,
         thumbnail: { url: item.img },
         footer: {

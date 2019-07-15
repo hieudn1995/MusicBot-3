@@ -12,7 +12,7 @@ global.getPlayer = (msg, checkOnly) => {
   if (Object.prototype.hasOwnProperty.call(Player, msg.guild.id)) return Player[msg.guild.id]
   else {
     if (!msg.member.voice.channel) return null
-    let Player = new MusicPlayer(msg, 4360181)
+    let Player = new MusicPlayer(msg, 4360181, 0)
     Player.on('play', item => Player.msgPlaying(Player.msg, item))
     global.Player[msg.guild.id] = Player
     return Player
