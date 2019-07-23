@@ -17,8 +17,8 @@
     "url": "https://github.com/bakapear/MusicBot/issues"
   },
   "engines": {
-	"node": "10.x"
-  }
+    "node": "10.x"
+  },
   "homepage": "https://github.com/bakapear/MusicBot#readme",
   "dependencies": {
     "discord.js": "github:discordjs/discord.js",
