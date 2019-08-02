@@ -2,7 +2,7 @@ module.exports = {
   name: ['queue', 'q'],
   desc: 'View and manipulate the queue.',
   permission: [],
-  usage: '(<page>/[info/i]/[remove/rem/r]) (<index>)',
+  usage: '(<page>/[info/i]/[remove/rem/r]/[clear]) (<index>)',
   args: 0,
   command: async function (msg, cmd, args) {
     let Player = global.getPlayer(msg, true)
@@ -10,14 +10,21 @@ module.exports = {
       return msg.channel.send('Nothing is playing right now!')
     }
     let arg = args[0]
-    if (!arg || !isNaN(arg)) {
-      showQueue(msg, Player, arg)
-    } else if (arg === 'info' || arg === 'i') {
-      showInfo(msg, Player, args[1])
-    } else if (arg === 'remove' || arg === 'rem' || arg === 'r') {
-      removeItem(msg, Player, args[1])
+    if (!arg || !isNaN(arg)) return showQueue(msg, Player, arg)
+    if (arg === 'info' || arg === 'i') return showInfo(msg, Player, args[1])
+    if (Player.channel !== msg.member.voice.channel) {
+      return msg.channel.send("You're not in the voice channel!")
     }
+    if (arg === 'remove' || arg === 'rem' || arg === 'r') return removeItem(msg, Player, args[1])
+    if (arg === 'clear') return clearItems(msg, Player)
   }
+}
+
+function clearItems (msg, Player) {
+  let queue = Player.get()
+  let first = queue.shift()
+  Player.set([first])
+  msg.channel.send('Cleared items in queue.')
 }
 
 function showQueue (msg, Player, page) {
