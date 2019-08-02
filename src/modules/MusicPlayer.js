@@ -6,26 +6,40 @@ let Event = require('events')
 let apiGoogle = process.env.API_GOOGLE
 let apiSoundCloud = process.env.API_SOUNDCLOUD
 
+let DISPLAY = [
+  'mini', // Minified output
+  'silent', // Console output only
+  'hidden' // No output
+]
+
+let FLAGS = {
+  1: 'LEAVE_ON_QUEUE_END',
+  2: 'LEAVE_ON_CHANNEL_EMPTY',
+  4: 'DELETE_ITEM_MESSAGE_ON_ITEM_END',
+  8: 'REMOVE_USER_ITEMS_ON_USER_LEAVE', // TODO
+  16: 'MESSAGES_TEMPORARY'
+}
+
 class MusicPlayer extends Event {
-  constructor (msg, color, mode) {
+  constructor (bot, msg, opts) {
     super()
     this.msg = msg
-    this.color = color || null
-    if (mode === 'mini') this.mode = 1
-    else if (mode === 'silent') this.mode = 2
-    else if (mode === 'hidden') this.mode = 3
+    this.last = null
+    this.color = opts.color || null
+    this.display = DISPLAY.indexOf(`${opts.display}`.toLowerCase()) + 1
+    this.flags = getFlags(opts.flags)
     this.channel = msg.member.voice.channel
     this.connection = null
     this.queue = []
     this.playing = false
     this.active = false
     this.looping = false
-    this.msgPlaying = (org, item) => {
-      if (mode === 3) return
+    this.msgPlaying = (org, item, skip) => {
+      if (this.display === 3) return
       if (item.radio) {
         let text = `NP: ${item.radio.title} [${this.time()}/${item.duration}]`
-        if (mode === 2) console.log(text)
-        else if (mode === 1) msg.channel.send(text)
+        if (this.display === 2) console.log(text)
+        else if (this.display === 1) org.channel.send(text).then(m => { if (!skip) this.last = m })
         else {
           org.channel.send({
             embed: {
@@ -39,12 +53,12 @@ class MusicPlayer extends Event {
                 text: `${item.author.name} • ${this.time()}/${item.duration}`
               }
             }
-          })
+          }).then(m => { if (!skip) this.last = m })
         }
       } else {
         let text = `NP: ${item.title} [${this.time()}/${item.duration}]`
-        if (mode === 2) console.log(text)
-        else if (mode === 1) msg.channel.send(text)
+        if (this.display === 2) console.log(text)
+        else if (this.display === 1) org.channel.send(text).then(m => { if (!skip) this.last = m })
         else {
           org.channel.send({
             embed: {
@@ -58,16 +72,16 @@ class MusicPlayer extends Event {
                 text: `${item.author.name} • ${this.time()}/${item.duration}`
               }
             }
-          })
+          }).then(m => { if (!skip) this.last = m })
         }
       }
     }
     this.msgQueued = (org, item) => {
-      if (mode === 3) return
+      if (this.display === 3) return
       if (item.playlist) {
         let text = `Q: ${item.playlist.title} (${item.items.length}) [${item.playlist.duration}]`
-        if (mode === 2) console.log(text)
-        else if (mode === 1) msg.channel.send(text)
+        if (this.display === 2) console.log(text)
+        else if (this.display === 1) org.channel.send(text).then(this.processMsg)
         else {
           let items = item.items
           org.channel.send({
@@ -82,12 +96,12 @@ class MusicPlayer extends Event {
                 text: `${items[0].author.name} • ${item.playlist.duration}`
               }
             }
-          })
+          }).then(this.processMsg)
         }
       } else {
         let text = `Q: ${item.title} [${item.duration}]`
-        if (mode === 2) console.log(text)
-        else if (mode === 1) msg.channel.send(text)
+        if (this.display === 2) console.log(text)
+        else if (this.display === 1) org.channel.send(text).then(this.processMsg)
         else {
           org.channel.send({
             embed: {
@@ -101,11 +115,38 @@ class MusicPlayer extends Event {
                 text: `${item.author.name} • ${item.duration}`
               }
             }
-          })
+          }).then(this.processMsg)
         }
       }
     }
     this.on('skip', () => this.next())
+    this.on('finish', () => {
+      if (this.flags.includes('LEAVE_ON_QUEUE_END')) {
+        this.reset()
+      }
+    })
+    this.on('end', () => {
+      if (this.last && this.flags.includes('DELETE_ITEM_MESSAGE_ON_ITEM_END')) {
+        this.last.delete()
+      }
+    })
+    bot.on('voiceStateUpdate', () => {
+      if (this.connection && this.channel.members.size === 1) {
+        if (this.flags.includes('LEAVE_ON_CHANNEL_EMPTY')) {
+          this.reset()
+        }
+      }
+    })
+    this.processMsg = m => {
+      if (m && this.flags.includes('MESSAGES_TEMPORARY')) {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            m.delete()
+            resolve(false)
+          }, 5000)
+        })
+      } else return true
+    }
   }
 }
 
@@ -114,7 +155,7 @@ MusicPlayer.prototype.add = async function (query, author) {
   if (query && query.error) item = { error: query.error }
   else if (query && !query.type) {
     if (['.mp3', '.mp4', '.ogg', '.wav', '.flac', '.webm'].some(x => query.endsWith(x)) && query.startsWith('http')) {
-      item = await getSongData(query)
+      item = await getItemData(query)
     } else if (query.indexOf('soundcloud.com/') >= 0) {
       item = await searchSC(query)
     } else {
@@ -179,19 +220,19 @@ MusicPlayer.prototype.play = async function (query, author) {
     let success = await this.join()
     if (!success) return null
   }
-  let song = query ? await this.add(query, author) : null
-  if (song && song.error) return song
+  let item = query ? await this.add(query, author) : null
+  if (item && item.error) return item
   if (!this.playing && this.queue.length) {
-    let item = await this.first()
+    let first = await this.first()
     let disp = null
-    switch (item.type) {
+    switch (first.type) {
       case 'yt': {
-        let stream = ytdl(item.url, { filter: 'audioonly' })
+        let stream = ytdl(first.url, { filter: 'audioonly' })
         disp = this.connection.play(stream)
         break
       }
       case 'stream': case 'file': case 'url': case 'radio': {
-        disp = this.connection.play(item.url)
+        disp = this.connection.play(first.url)
         break
       }
     }
@@ -200,11 +241,14 @@ MusicPlayer.prototype.play = async function (query, author) {
       this.connection.player.streamingData.pausedTime = 0
       this.active = true
       this.playing = true
-      this.emit('play', item)
+      this.emit('play', first)
     })
-    disp.on('finish', () => this.next())
+    disp.on('finish', () => {
+      this.emit('end')
+      this.next()
+    })
   }
-  return song
+  return item
 }
 
 MusicPlayer.prototype.next = function () {
@@ -214,7 +258,7 @@ MusicPlayer.prototype.next = function () {
     setTimeout(() => this.play(), 1500)
   } else {
     this.active = false
-    this.emit('end')
+    this.emit('finish')
   }
 }
 
@@ -255,6 +299,7 @@ MusicPlayer.prototype.skip = function () {
   if (this.connection) {
     if (this.connection.dispatcher) {
       this.connection.dispatcher.destroy()
+      this.emit('end')
       this.emit('skip')
     }
   }
@@ -299,6 +344,7 @@ MusicPlayer.prototype.reset = function () {
   this.playing = false
   this.active = false
   this.looping = false
+  global.Player = {}
   this.emit('reset')
 }
 
@@ -517,7 +563,7 @@ async function getYTPlaylistVids (id) {
   } catch (e) { if (e) return null }
 }
 
-async function getSongData (url) {
+async function getItemData (url) {
   return {
     type: 'url',
     title: url,
@@ -585,6 +631,11 @@ function validURL (str) {
     '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
     '(\\#[-a-z\\d_]*)?$', 'i') // fragment locator
   return !!pattern.test(str)
+}
+
+function getFlags (n) {
+  let res = Object.keys(FLAGS).filter(x => x & n)
+  return res.map(x => FLAGS[x])
 }
 
 module.exports = MusicPlayer
