@@ -16,7 +16,7 @@ let FLAGS = {
   1: 'LEAVE_ON_QUEUE_END',
   2: 'LEAVE_ON_CHANNEL_EMPTY',
   4: 'DELETE_ITEM_MESSAGE_ON_ITEM_END',
-  8: 'REMOVE_USER_ITEMS_ON_USER_LEAVE', // TODO
+  8: 'REMOVE_USER_ITEMS_ON_USER_LEAVE',
   16: 'MESSAGES_TEMPORARY'
 }
 
@@ -119,6 +119,16 @@ class MusicPlayer extends Event {
         }
       }
     }
+    this.processMsg = m => {
+      if (m && this.flags.includes('MESSAGES_TEMPORARY')) {
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            m.delete()
+            resolve(false)
+          }, 5000)
+        })
+      } else return true
+    }
     this.on('skip', () => this.next())
     this.on('finish', () => {
       if (this.flags.includes('LEAVE_ON_QUEUE_END')) {
@@ -130,23 +140,20 @@ class MusicPlayer extends Event {
         this.last.delete()
       }
     })
-    bot.on('voiceStateUpdate', () => {
+    bot.on('voiceStateUpdate', (oldm, newm) => {
       if (this.connection && this.channel.members.size === 1) {
         if (this.flags.includes('LEAVE_ON_CHANNEL_EMPTY')) {
           this.reset()
         }
       }
+      if (this.connection && this.queue.length) {
+        if (oldm.channel !== newm.channel && this.flags.includes('REMOVE_USER_ITEMS_ON_USER_LEAVE')) {
+          let first = this.queue.shift()
+          this.queue = this.queue.filter(x => x.author.id !== oldm.id)
+          this.queue.unshift(first)
+        }
+      }
     })
-    this.processMsg = m => {
-      if (m && this.flags.includes('MESSAGES_TEMPORARY')) {
-        return new Promise((resolve, reject) => {
-          setTimeout(() => {
-            m.delete()
-            resolve(false)
-          }, 5000)
-        })
-      } else return true
-    }
   }
 }
 
