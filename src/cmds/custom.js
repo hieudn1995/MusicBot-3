@@ -3,7 +3,7 @@ let apiGithub = process.env.API_GITHUB
 
 module.exports = {
   name: ['sound', 'snd'],
-  desc: 'Plays a garrysmod chat sound in the voice channel!',
+  desc: 'Play a garrysmod chat sound in the voice channel!',
   permission: [],
   usage: '<query>',
   args: 1,

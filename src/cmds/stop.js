@@ -1,6 +1,6 @@
 module.exports = {
   name: ['stop', 's'],
-  desc: 'Stops queue and leaves voice channel.',
+  desc: 'Stop queue and leave voice channel.',
   permission: [],
   usage: '',
   args: 0,

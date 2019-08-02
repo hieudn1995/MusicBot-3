@@ -1,6 +1,6 @@
 module.exports = {
   name: ['pause'],
-  desc: 'Pauses current song in queue.',
+  desc: 'Pause current item in queue.',
   permission: [],
   usage: '',
   args: 0,

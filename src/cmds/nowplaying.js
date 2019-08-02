@@ -1,6 +1,6 @@
 module.exports = {
   name: ['nowplaying', 'np'],
-  desc: 'Shows current song in queue.',
+  desc: 'Show current item in queue.',
   permission: [],
   usage: '',
   args: 0,
@@ -13,6 +13,6 @@ module.exports = {
     let item = await Player.first()
     if (!item) msg.channel.send('Nothing found!')
     else if (item.error) msg.channel.send(item.error)
-    else Player.msgPlaying(msg, item)
+    else Player.msgPlaying(msg, item, true)
   }
 }

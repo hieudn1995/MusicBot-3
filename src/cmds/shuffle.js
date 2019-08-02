@@ -1,6 +1,6 @@
 module.exports = {
   name: ['shuffle'],
-  desc: 'Shuffle all songs in queue',
+  desc: 'Shuffle all items in queue.',
   permission: [],
   usage: '(random/fair)',
   args: 0,

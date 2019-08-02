@@ -1,6 +1,6 @@
 module.exports = {
   name: ['loop'],
-  desc: 'Loops current song in queue.',
+  desc: 'Loop current item in queue.',
   permission: [],
   usage: '',
   args: 0,
@@ -11,6 +11,6 @@ module.exports = {
       return
     }
     let state = Player.loop()
-    msg.channel.send(state ? 'Looping current song!' : 'Not looping anymore!')
+    msg.channel.send(state ? 'Looping current item!' : 'Not looping anymore!')
   }
 }

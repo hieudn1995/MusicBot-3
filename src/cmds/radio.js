@@ -1,7 +1,7 @@
 
 module.exports = {
   name: ['radio', 'r'],
-  desc: 'Tune in to a collection of radios!',
+  desc: 'Tune into a collection of radios.',
   permission: [],
   usage: '<radio/list>',
   args: 1,

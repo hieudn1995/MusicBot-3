@@ -1,6 +1,6 @@
 module.exports = {
   name: ['queue', 'q'],
-  desc: 'Manipulate the current queue!',
+  desc: 'View and manipulate the queue.',
   permission: [],
   usage: '(<page>/[info/i]/[remove/rem/r]) (<index>)',
   args: 0,

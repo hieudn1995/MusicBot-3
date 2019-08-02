@@ -1,6 +1,6 @@
 module.exports = {
   name: ['skip', 'next', 'n'],
-  desc: 'Skip current song in queue.',
+  desc: 'Skip current item in queue.',
   permission: [],
   usage: '',
   args: 0,
