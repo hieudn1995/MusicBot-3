@@ -9,9 +9,9 @@ global.Player = {}
 global.getPlayer = (msg, checkOnly) => {
   let Player = global.Player
   if (checkOnly) return Object.prototype.hasOwnProperty.call(Player, msg.guild.id) && Player[msg.guild.id].connection ? Player[msg.guild.id] : null
-  if (Object.prototype.hasOwnProperty.call(Player, msg.guild.id)) return Player[msg.guild.id]
+  if (!msg.member.voice.channel) return null
+  else if (Object.prototype.hasOwnProperty.call(Player, msg.guild.id)) return Player[msg.guild.id]
   else {
-    if (!msg.member.voice.channel) return null
     let Player = new MusicPlayer(bot, msg, { color: 4360181, display: 0, mode: 0, flags: 0 })
     Player.on('play', item => Player.msgPlaying(Player.msg, item))
     global.Player[msg.guild.id] = Player

@@ -10,6 +10,9 @@ module.exports = {
       msg.channel.send('Nothing is playing right now!')
       return
     }
+    if (Player.channel !== msg.member.voice.channel) {
+      return msg.channel.send("You're not in the voice channel!")
+    }
     let method = args[0]
     if (!method || method === 'random') {
       let queue = Player.get()

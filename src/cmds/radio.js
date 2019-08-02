@@ -7,9 +7,9 @@ module.exports = {
   args: 1,
   command: async function (msg, cmd, args) {
     let Player = global.getPlayer(msg)
-    if (!Player) {
-      msg.channel.send("You're not in a voice channel!")
-      return
+    if (!Player) return msg.channel.send("You're not in a voice channel!")
+    if (Player.channel !== msg.member.voice.channel) {
+      return msg.channel.send("You're not in the voice channel!")
     }
     let query = args.join(' ')
     if (query === 'list') printList(Player, msg)
