@@ -351,7 +351,6 @@ MusicPlayer.prototype.reset = function () {
   this.playing = false
   this.active = false
   this.looping = false
-  global.Player = {}
   this.emit('reset')
 }
 
