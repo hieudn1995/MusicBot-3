@@ -287,7 +287,7 @@ MusicPlayer.prototype.next = function () {
   if (!this.looping) this.queue.shift()
   this.playing = false
   if (this.queue.length) {
-    setTimeout(() => this.play(), 1500)
+    setTimeout(() => this.play(), 500)
   } else {
     this.active = false
     this.emit('finish')
