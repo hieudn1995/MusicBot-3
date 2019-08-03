@@ -1,9 +1,8 @@
 let got = require('got')
-let apiGithub = process.env.API_GITHUB
 
 module.exports = {
   name: ['sound', 'snd'],
-  desc: 'Play a garrysmod chat sound in the voice channel!',
+  desc: 'Play a chat sound in the voice channel!',
   permission: [],
   usage: '<query>',
   args: 1,
@@ -14,6 +13,8 @@ module.exports = {
       return msg.channel.send("You're not in the voice channel!")
     }
     let sound = await getChatsound(args.join(' '))
+    if (!sound) return msg.channel.send('Something went wrong!')
+    else if (sound.error) return msg.channel.send(sound.error)
     let item = await Player.play(sound, msg.author)
     if (!item) msg.channel.send('Nothing found!')
     else if (item.error) msg.channel.send(item.error)
@@ -22,16 +23,29 @@ module.exports = {
 }
 
 async function getChatsound (query, rnd) {
-  let url = `https://api.github.com/search/code?q=${encodeURIComponent(query.trim())}+in:path+extension:ogg+path:sound/chatsounds/autoadd+repo:Metastruct/garrysmod-chatsounds&access_token=${apiGithub}`
-  let { body } = await got(url, {
-    headers: { 'User-Agent': 'Jibril' },
-    json: true
-  })
-  if (!body.total_count) return
-  let mod = rnd ? Math.floor(Math.random() * body.items.length) : 0
-  return {
-    type: 'url',
-    url: `https://raw.githubusercontent.com/Metastruct/garrysmod-chatsounds/master/${encodeURIComponent(body.items[mod].path.trim())}`,
-    title: body.items[mod].name
-  }
+  try {
+    let folder
+    if (query.indexOf('/') >= 0) {
+      let parts = query.split('/')
+      folder = parts.shift()
+      query = parts.join('/')
+    }
+    let url = 'https://purr.now.sh/chatsounds/get'
+    let { body } = await got(url, {
+      query: {
+        q: query,
+        f: folder
+      },
+      json: true
+    })
+    if (!body || !body.success) return null
+    if (!body.body.length) return { error: 'Nothing found!' }
+    body = body.body[0]
+    let sound = body.path[Math.floor(Math.random() * body.path.length)]
+    return {
+      type: 'url',
+      url: 'https://raw.githubusercontent.com/' + sound,
+      title: body.name
+    }
+  } catch (e) { console.log(e); return null }
 }
