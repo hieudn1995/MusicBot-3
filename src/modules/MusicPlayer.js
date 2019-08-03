@@ -29,6 +29,7 @@ class MusicPlayer extends Event {
         this[guild] = new MusicPlayer(bot, opts, true)
         let Player = this[guild]
         Player.on('play', item => Player.msgPlaying(Player.msg, item))
+        return Player
       }
       this.strike = function (guild) {
         if (!this[guild]) return
@@ -36,6 +37,7 @@ class MusicPlayer extends Event {
       }
       this.get = function (msg, checkOnly) {
         let Player = this[msg.guild.id]
+        if (!Player) Player = this.init(msg.guild.id)
         if (Player.channel) return Player
         if (checkOnly) return null
         if (!Player.join(msg)) return null
