@@ -21,139 +21,160 @@ let FLAGS = {
 }
 
 class MusicPlayer extends Event {
-  constructor (bot, msg, opts) {
+  constructor (bot, opts, next) {
     super()
-    this.msg = msg
-    this.last = null
-    this.color = opts.color || null
-    this.display = DISPLAY.indexOf(`${opts.display}`.toLowerCase()) + 1
-    this.flags = getFlags(opts.flags)
-    this.channel = msg.member.voice.channel
-    this.connection = null
-    this.queue = []
-    this.playing = false
-    this.active = false
-    this.looping = false
-    this.msgPlaying = (org, item, skip) => {
-      if (this.display === 3) return
-      if (item.radio) {
-        let text = `NP: ${item.radio.title} [${this.time()}/${item.duration}]`
-        if (this.display === 2) console.log(text)
-        else if (this.display === 1) org.channel.send(text).then(m => { if (!skip) this.last = m })
-        else {
-          org.channel.send({
-            embed: {
-              title: 'Listening to ' + item.radio.name,
-              color: this.color,
-              url: item.nolink ? undefined : item.link || item.url,
-              description: `\`${item.radio.song}\``,
-              thumbnail: { url: item.img },
-              footer: {
-                icon_url: item.author.avatar,
-                text: `${item.author.name} • ${this.time()}/${item.duration}`
-              }
-            }
-          }).then(m => { if (!skip) this.last = m })
-        }
-      } else {
-        let text = `NP: ${item.title} [${this.time()}/${item.duration}]`
-        if (this.display === 2) console.log(text)
-        else if (this.display === 1) org.channel.send(text).then(m => { if (!skip) this.last = m })
-        else {
-          org.channel.send({
-            embed: {
-              title: 'Now Playing',
-              color: this.color,
-              url: item.nolink ? undefined : item.link || item.url,
-              description: `\`${item.title}\``,
-              thumbnail: { url: item.img },
-              footer: {
-                icon_url: item.author.avatar,
-                text: `${item.author.name} • ${this.time()}/${item.duration}`
-              }
-            }
-          }).then(m => { if (!skip) this.last = m })
-        }
+    if (!next) {
+      this.init = function (guild) {
+        if (this[guild]) return
+        this[guild] = new MusicPlayer(bot, opts, true)
+        let Player = this[guild]
+        Player.on('play', item => Player.msgPlaying(Player.msg, item))
       }
-    }
-    this.msgQueued = (org, item) => {
-      if (this.display === 3) return
-      if (item.playlist) {
-        let text = `Q: ${item.playlist.title} (${item.items.length}) [${item.playlist.duration}]`
-        if (this.display === 2) console.log(text)
-        else if (this.display === 1) org.channel.send(text).then(this.processMsg)
-        else {
-          let items = item.items
-          org.channel.send({
-            embed: {
-              title: `Added ${items.length} Item${items.length > 1 ? 's' : ''} to Queue`,
-              color: this.color,
-              url: item.playlist.url,
-              description: `\`${item.playlist.title}\``,
-              thumbnail: { url: item.playlist.img },
-              footer: {
-                icon_url: items[0].author.avatar,
-                text: `${items[0].author.name} • ${item.playlist.duration}`
+      this.strike = function (guild) {
+        if (!this[guild]) return
+        delete this[guild]
+      }
+      this.get = function (msg, checkOnly) {
+        let Player = this[msg.guild.id]
+        if (Player.channel) return Player
+        if (checkOnly) return null
+        if (!Player.join(msg)) return null
+        return Player
+      }
+    } else {
+      this.display = DISPLAY.indexOf(`${opts.display}`.toLowerCase()) + 1
+      this.flags = getFlags(opts.flags)
+      this.color = opts.color || null
+      this.connection = null
+      this.playing = false
+      this.looping = false
+      this.channel = null
+      this.active = false
+      this.last = null
+      this.msg = null
+      this.queue = []
+
+      this.msgPlaying = (org, item, skip) => {
+        if (this.display === 3) return
+        if (item.radio) {
+          let text = `NP: ${item.radio.title} [${this.time()}/${item.duration}]`
+          if (this.display === 2) console.log(text)
+          else if (this.display === 1) org.channel.send(text).then(m => { if (!skip) this.last = m })
+          else {
+            org.channel.send({
+              embed: {
+                title: 'Listening to ' + item.radio.name,
+                color: this.color,
+                url: item.nolink ? undefined : item.link || item.url,
+                description: `\`${item.radio.song}\``,
+                thumbnail: { url: item.img },
+                footer: {
+                  icon_url: item.author.avatar,
+                  text: `${item.author.name} • ${this.time()}/${item.duration}`
+                }
               }
-            }
-          }).then(this.processMsg)
-        }
-      } else {
-        let text = `Q: ${item.title} [${item.duration}]`
-        if (this.display === 2) console.log(text)
-        else if (this.display === 1) org.channel.send(text).then(this.processMsg)
-        else {
-          org.channel.send({
-            embed: {
-              title: `Added To Queue`,
-              color: this.color,
-              url: item.nolink ? undefined : item.link || item.url,
-              description: `\`${item.title}\``,
-              thumbnail: { url: item.img },
-              footer: {
-                icon_url: item.author.avatar,
-                text: `${item.author.name} • ${item.duration}`
+            }).then(m => { if (!skip) this.last = m })
+          }
+        } else {
+          let text = `NP: ${item.title} [${this.time()}/${item.duration}]`
+          if (this.display === 2) console.log(text)
+          else if (this.display === 1) org.channel.send(text).then(m => { if (!skip) this.last = m })
+          else {
+            org.channel.send({
+              embed: {
+                title: 'Now Playing',
+                color: this.color,
+                url: item.nolink ? undefined : item.link || item.url,
+                description: `\`${item.title}\``,
+                thumbnail: { url: item.img },
+                footer: {
+                  icon_url: item.author.avatar,
+                  text: `${item.author.name} • ${this.time()}/${item.duration}`
+                }
               }
-            }
-          }).then(this.processMsg)
+            }).then(m => { if (!skip) this.last = m })
+          }
         }
       }
-    }
-    this.processMsg = m => {
-      if (m && this.flags.includes('MESSAGES_TEMPORARY')) {
-        return new Promise((resolve, reject) => {
-          setTimeout(() => {
-            m.delete()
-            resolve(false)
-          }, 5000)
-        })
-      } else return true
-    }
-    this.on('skip', () => this.next())
-    this.on('finish', () => {
-      if (this.flags.includes('LEAVE_ON_QUEUE_END')) {
-        this.reset()
+      this.msgQueued = (org, item) => {
+        if (this.display === 3) return
+        if (item.playlist) {
+          let text = `Q: ${item.playlist.title} (${item.items.length}) [${item.playlist.duration}]`
+          if (this.display === 2) console.log(text)
+          else if (this.display === 1) org.channel.send(text).then(this.processMsg)
+          else {
+            let items = item.items
+            org.channel.send({
+              embed: {
+                title: `Added ${items.length} Item${items.length > 1 ? 's' : ''} to Queue`,
+                color: this.color,
+                url: item.playlist.url,
+                description: `\`${item.playlist.title}\``,
+                thumbnail: { url: item.playlist.img },
+                footer: {
+                  icon_url: items[0].author.avatar,
+                  text: `${items[0].author.name} • ${item.playlist.duration}`
+                }
+              }
+            }).then(this.processMsg)
+          }
+        } else {
+          let text = `Q: ${item.title} [${item.duration}]`
+          if (this.display === 2) console.log(text)
+          else if (this.display === 1) org.channel.send(text).then(this.processMsg)
+          else {
+            org.channel.send({
+              embed: {
+                title: `Added To Queue`,
+                color: this.color,
+                url: item.nolink ? undefined : item.link || item.url,
+                description: `\`${item.title}\``,
+                thumbnail: { url: item.img },
+                footer: {
+                  icon_url: item.author.avatar,
+                  text: `${item.author.name} • ${item.duration}`
+                }
+              }
+            }).then(this.processMsg)
+          }
+        }
       }
-    })
-    this.on('end', () => {
-      if (this.last && this.flags.includes('DELETE_ITEM_MESSAGE_ON_ITEM_END')) {
-        this.last.delete()
+      this.processMsg = m => {
+        if (m && this.flags.includes('MESSAGES_TEMPORARY')) {
+          return new Promise((resolve, reject) => {
+            setTimeout(() => {
+              m.delete()
+              resolve(false)
+            }, 5000)
+          })
+        } else return true
       }
-    })
-    bot.on('voiceStateUpdate', (oldm, newm) => {
-      if (this.connection && this.channel.members.size === 1) {
-        if (this.flags.includes('LEAVE_ON_CHANNEL_EMPTY')) {
+      this.on('skip', () => this.next())
+      this.on('finish', () => {
+        if (this.flags.includes('LEAVE_ON_QUEUE_END')) {
           this.reset()
         }
-      }
-      if (this.connection && this.queue.length) {
-        if (oldm.channel !== newm.channel && this.flags.includes('REMOVE_USER_ITEMS_ON_USER_LEAVE')) {
-          let first = this.queue.shift()
-          this.queue = this.queue.filter(x => x.author.id !== oldm.id)
-          this.queue.unshift(first)
+      })
+      this.on('end', () => {
+        if (this.last && this.flags.includes('DELETE_ITEM_MESSAGE_ON_ITEM_END')) {
+          this.last.delete()
         }
-      }
-    })
+      })
+      bot.on('voiceStateUpdate', (oldm, newm) => {
+        if (this.connection && this.channel.members.size === 1) {
+          if (this.flags.includes('LEAVE_ON_CHANNEL_EMPTY')) {
+            this.reset()
+          }
+        }
+        if (this.connection && this.queue.length) {
+          if (oldm.channel !== newm.channel && this.flags.includes('REMOVE_USER_ITEMS_ON_USER_LEAVE')) {
+            let first = this.queue.shift()
+            this.queue = this.queue.filter(x => x.author.id !== oldm.id)
+            this.queue.unshift(first)
+          }
+        }
+      })
+    }
   }
 }
 
@@ -213,7 +234,9 @@ MusicPlayer.prototype.add = async function (query, author) {
   return item
 }
 
-MusicPlayer.prototype.join = async function () {
+MusicPlayer.prototype.join = async function (msg) {
+  this.msg = msg
+  this.channel = msg.member.voice.channel
   if (this.channel) {
     this.connection = await this.channel.join()
     return true
@@ -224,7 +247,7 @@ MusicPlayer.prototype.join = async function () {
 
 MusicPlayer.prototype.play = async function (query, author) {
   if (!this.connection) {
-    let success = await this.join()
+    let success = await this.join(this.msg)
     if (!success) return null
   }
   let item = query ? await this.add(query, author) : null
@@ -348,6 +371,7 @@ MusicPlayer.prototype.reset = function () {
   this.queue = []
   if (this.connection) this.connection.channel.leave()
   this.connection = null
+  this.channel = null
   this.playing = false
   this.active = false
   this.looping = false

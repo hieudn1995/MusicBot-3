@@ -1,3 +1,4 @@
+/* global Player:writable */
 let cfg = { token: process.env.BOT_TOKEN, prefix: '>' }
 let Discord = require('discord.js')
 let path = require('path')
@@ -5,21 +6,14 @@ let fs = require('fs')
 let bot = new Discord.Client()
 let MusicPlayer = require('./modules/MusicPlayer')
 
-global.Player = {}
-global.getPlayer = (msg, checkOnly) => {
-  let Player = global.Player
-  if (checkOnly) return Object.prototype.hasOwnProperty.call(Player, msg.guild.id) && Player[msg.guild.id].connection ? Player[msg.guild.id] : null
-  if (!msg.member.voice.channel) return null
-  else if (Object.prototype.hasOwnProperty.call(Player, msg.guild.id)) return Player[msg.guild.id]
-  else {
-    let Player = new MusicPlayer(bot, msg, { color: 4360181, display: 0, mode: 0, flags: 0 })
-    Player.on('play', item => Player.msgPlaying(Player.msg, item))
-    global.Player[msg.guild.id] = Player
-    return Player
-  }
-}
+Player = new MusicPlayer(bot, { color: 4360181 })
 
-bot.on('ready', () => console.log('Woof.'))
+bot.on('ready', () => {
+  bot.guilds.array().map(x => Player.init(x.id))
+  console.log('Woof! I am barking around.')
+})
+bot.on('guildCreate', guild => Player.init(guild.id))
+bot.on('guildDelete', guild => Player.strike(guild.id))
 
 bot.on('message', async msg => {
   if (!msg.content.startsWith(cfg.prefix)) return

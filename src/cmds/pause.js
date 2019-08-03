@@ -5,7 +5,7 @@ module.exports = {
   usage: '',
   args: 0,
   command: async function (msg, cmd, args) {
-    let Player = global.getPlayer(msg, true)
+    let Player = global.Player.get(msg, true)
     if (!Player || !Player.size() || !Player.active) {
       return msg.channel.send('Nothing is playing right now!')
     }
