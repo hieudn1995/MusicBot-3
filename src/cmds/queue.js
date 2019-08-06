@@ -44,8 +44,8 @@ function showQueue (msg, Player, page) {
     let num = i === 0 ? 'NP:' : `${i}.`
     list.push(`${num} \`${trimSentence(item.title, 50)}\``)
   }
-  if (min > 0) list.unshift(`> ${min}`)
-  if (max !== size) list.push(`> ${size - max}`)
+  if (min > 0) list.unshift(`\\> ${min}`)
+  if (max !== size) list.push(`\\> ${size - max}`)
 
   let times = Player.get().map(x => x.duration)
   let duration = times.includes('∞') ? '∞' : times.map(x => hmsToMs(x)).reduce((a, b) => a + b, 0)
