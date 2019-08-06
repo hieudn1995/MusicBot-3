@@ -24,27 +24,24 @@ module.exports = {
 
 async function getChatsound (query, rnd) {
   try {
-    let folder
+    let folder = ''
     if (query.indexOf('/') >= 0) {
       let parts = query.split('/')
       folder = parts.shift()
       query = parts.join('/')
     }
-    let url = 'https://purr.now.sh/chatsounds/get'
-    let { body } = await got(url, {
-      query: {
-        q: query,
-        f: folder
-      },
-      json: true
-    })
+    query = query.split(' ').join('%20')
+    let url = `https://purr.now.sh/chatsounds/get?q=${query}&f=${folder}`
+    let { body } = await got(url, { json: true })
     if (!body || !body.success) return null
     if (!body.body.length) return { error: 'Nothing found!' }
-    body = body.body[0]
+    let rnd = Math.floor(Math.random() * body.body.length)
+    if (!folder) rnd = 0
+    body = body.body[rnd]
     let sound = body.path[Math.floor(Math.random() * body.path.length)]
     return {
       type: 'url',
-      url: 'https://raw.githubusercontent.com/' + sound,
+      url: 'https://raw.githubusercontent.com/' + sound.split(' ').join('%20'),
       title: body.name
     }
   } catch (e) { console.log(e); return null }
