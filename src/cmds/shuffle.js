@@ -2,7 +2,7 @@ module.exports = {
   name: ['shuffle'],
   desc: 'Shuffle all items in queue.',
   permission: [],
-  usage: '(random/fair)',
+  usage: '',
   args: 0,
   command: async function (msg, cmd, args) {
     let Player = global.Player.get(msg, true)
@@ -13,24 +13,12 @@ module.exports = {
     if (Player.channel !== msg.member.voice.channel) {
       return msg.channel.send("You're not in the voice channel!")
     }
-    let method = args[0]
-    if (!method || method === 'random') {
-      let queue = Player.get()
-      let first = queue.shift()
-      queue = shuffleArray(queue)
-      queue.unshift(first)
-      Player.set(queue)
-      msg.channel.send('Shuffled queue!')
-    } else if (method === 'fair') {
-      let queue = Player.get()
-      let first = queue.shift()
-      queue = shuffleArrayFair(queue)
-      queue.unshift(first)
-      msg.channel.send('Shuffled queue with a bit of salt!')
-      Player.set(queue)
-    } else {
-      msg.channel.send('Invalid method!')
-    }
+    let queue = Player.get()
+    let first = queue.shift()
+    queue = shuffleArrayFair(queue)
+    queue.unshift(first)
+    msg.channel.send('Shuffled the queue!')
+    Player.set(queue)
   }
 }
 

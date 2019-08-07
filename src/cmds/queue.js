@@ -11,11 +11,11 @@ module.exports = {
     }
     let arg = args[0]
     if (!arg || !isNaN(arg)) return showQueue(msg, Player, arg)
-    if (arg === 'info' || arg === 'i') return showInfo(msg, Player, args[1])
+    if (arg === 'info' || arg === 'i') return showInfo(msg, Player, args.slice(1).join(' '))
     if (Player.channel !== msg.member.voice.channel) {
       return msg.channel.send("You're not in the voice channel!")
     }
-    if (arg === 'remove' || arg === 'rem' || arg === 'r') return removeItem(msg, Player, args[1])
+    if (arg === 'remove' || arg === 'rem' || arg === 'r') return removeItem(msg, Player, args.slice(1).join(' '))
     if (arg === 'clear') return clearItems(msg, Player)
   }
 }
@@ -68,7 +68,7 @@ function trimSentence (str, limit) {
 }
 
 function showInfo (msg, Player, index) {
-  if (index === undefined || isNaN(index)) {
+  if (index === undefined) {
     let list = []
     let queue = Player.get()
     let size = Player.size()
@@ -103,10 +103,11 @@ function showInfo (msg, Player, index) {
       }
     })
   } else {
+    if (isNaN(index)) index = Player.get().findIndex(x => x.title.toLowerCase().indexOf(index.toLowerCase()) >= 0)
     let item = Player.get(index)
     if (!item) {
-      index = Player.size() - 1
-      item = Player.get(index)
+      msg.channel.send('Nothing found! Please enter a valid query or index')
+      return
     }
     msg.channel.send({
       embed: {

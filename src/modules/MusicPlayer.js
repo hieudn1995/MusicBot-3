@@ -52,14 +52,16 @@ class MusicPlayer extends Event {
       this.looping = false
       this.channel = null
       this.active = false
+      this.members = []
       this.last = null
       this.msg = null
       this.queue = []
 
       this.msgPlaying = (org, item, skip) => {
+        let getTime = () => `${this.time()}/${item.duration}`
         if (this.display === 3) return
         if (item.radio) {
-          let text = `NP: ${item.radio.title} [${this.time()}/${item.duration}]`
+          let text = `NP: ${item.radio.title} [${getTime()}]`
           if (this.display === 2) console.log(text)
           else if (this.display === 1) org.channel.send(text).then(m => { if (!skip) this.last = m })
           else {
@@ -72,26 +74,28 @@ class MusicPlayer extends Event {
                 thumbnail: { url: item.img },
                 footer: {
                   icon_url: item.author.avatar,
-                  text: `${item.author.name} • ${this.time()}/${item.duration}`
+                  text: `${item.author.name} • ${getTime()}`
                 }
               }
             }).then(m => { if (!skip) this.last = m })
           }
         } else {
-          let text = `NP: ${item.title} [${this.time()}/${item.duration}]`
+          let text = `NP: ${item.title} [${getTime()}]`
           if (this.display === 2) console.log(text)
           else if (this.display === 1) org.channel.send(text).then(m => { if (!skip) this.last = m })
           else {
+            let error = ''
+            if (item.streamError) error = `\n\n${item.streamError}`
             org.channel.send({
               embed: {
                 title: 'Now Playing',
                 color: this.color,
                 url: item.nolink ? undefined : item.link || item.url,
-                description: `\`${item.title}\``,
+                description: `\`${item.title}\`` + error,
                 thumbnail: { url: item.img },
                 footer: {
                   icon_url: item.author.avatar,
-                  text: `${item.author.name} • ${this.time()}/${item.duration}`
+                  text: `${item.author.name} • ${getTime()}`
                 }
               }
             }).then(m => { if (!skip) this.last = m })
@@ -127,7 +131,7 @@ class MusicPlayer extends Event {
           else {
             org.channel.send({
               embed: {
-                title: `Added To Queue`,
+                title: `Added To Queue (Position: ${this.queue.indexOf(item)})`,
                 color: this.color,
                 url: item.nolink ? undefined : item.link || item.url,
                 description: `\`${item.title}\``,
@@ -163,31 +167,47 @@ class MusicPlayer extends Event {
         }
       })
       bot.on('voiceStateUpdate', (oldm, newm) => {
-        if (this.connection && this.channel.members.size === 1) {
-          if (this.flags.includes('LEAVE_ON_CHANNEL_EMPTY')) {
-            this.reset()
+        if (this.msg) this.connection = bot.voice.connections.find(x => x.channel.guild.id === this.msg.guild.id)
+        if (this.connection) {
+          this.channel = this.connection.channel
+          if (this.channel.members.size === 1) {
+            if (this.flags.includes('LEAVE_ON_CHANNEL_EMPTY')) {
+              this.reset()
+            }
+          }
+          if (oldm.channel === this.channel && newm.channel !== oldm.channel) {
+            if (this.size() && this.flags.includes('REMOVE_USER_ITEMS_ON_USER_LEAVE')) {
+              let first = this.queue.shift()
+              this.queue = this.queue.filter(x => x.author.id !== oldm.id)
+              this.queue.unshift(first)
+            }
           }
         }
-        if (this.connection && this.queue.length) {
-          if (oldm.channel !== newm.channel && this.flags.includes('REMOVE_USER_ITEMS_ON_USER_LEAVE')) {
-            let first = this.queue.shift()
-            this.queue = this.queue.filter(x => x.author.id !== oldm.id)
-            this.queue.unshift(first)
-          }
+        if (this.channel) {
+          let members = this.channel.members.array().map(x => x.id).filter(x => x !== bot.user.id)
+          this.members = members
         }
       })
     }
   }
 }
 
+MusicPlayer.prototype.size = function () {
+  return this.queue.length
+}
+
 MusicPlayer.prototype.add = async function (query, author) {
   let item = null
   if (query && query.error) item = { error: query.error }
   else if (query && !query.type) {
-    if (['.mp3', '.mp4', '.ogg', '.wav', '.flac', '.webm'].some(x => query.endsWith(x)) && query.startsWith('http')) {
-      item = await getItemData(query)
-    } else if (query.indexOf('soundcloud.com/') >= 0) {
-      item = await searchSC(query)
+    if (validURL(query)) {
+      if (query.indexOf('soundcloud.com/') >= 0) {
+        item = await searchSC(query)
+      } else if (query.indexOf('youtu.be/') >= 0 || query.indexOf('youtube.com/') >= 0) {
+        item = await searchYT(query)
+      } else {
+        item = await getItemData(query)
+      }
     } else {
       item = await searchYT(query)
     }
@@ -209,7 +229,7 @@ MusicPlayer.prototype.add = async function (query, author) {
       items[i].author = authorObj
       items[i].timestamp = Date.now()
       if (!items[i].duration) items[i].duration = '∞'
-      this.queue.push(items[i])
+      this.update(items[i])
     }
     this.emit('queue', item)
     return item
@@ -230,8 +250,8 @@ MusicPlayer.prototype.add = async function (query, author) {
         item.duration = formatTime(info.format.duration * 1000)
       }
     }
-    if (this.queue.length) this.emit('queue', item)
-    this.queue.push(item)
+    if (this.size()) this.emit('queue', item)
+    this.update(item)
   }
   return item
 }
@@ -254,12 +274,14 @@ MusicPlayer.prototype.play = async function (query, author) {
   }
   let item = query ? await this.add(query, author) : null
   if (item && item.error) return item
-  if (!this.playing && this.queue.length) {
+  if (!this.playing && this.size()) {
     let first = await this.first()
     let disp = null
+    let strm = null
     switch (first.type) {
       case 'yt': {
         let stream = ytdl(first.url, { filter: 'audioonly' })
+        strm = stream
         disp = this.connection.play(stream)
         break
       }
@@ -269,6 +291,14 @@ MusicPlayer.prototype.play = async function (query, author) {
       }
     }
     if (!disp) return
+    strm.on('error', e => {
+      this.connection.player.streamingData.pausedTime = 0
+      this.active = true
+      this.playing = true
+      first.streamError = e.message.substr(e.message.indexOf(': ') + 2)
+      this.emit('play', first)
+      setTimeout(() => this.next(), 500)
+    })
     disp.on('start', () => {
       this.connection.player.streamingData.pausedTime = 0
       this.active = true
@@ -286,7 +316,7 @@ MusicPlayer.prototype.play = async function (query, author) {
 MusicPlayer.prototype.next = function () {
   if (!this.looping) this.queue.shift()
   this.playing = false
-  if (this.queue.length) {
+  if (this.size()) {
     setTimeout(() => this.play(), 500)
   } else {
     this.active = false
@@ -304,7 +334,7 @@ MusicPlayer.prototype.first = async function () {
 }
 
 MusicPlayer.prototype.last = function () {
-  return this.queue[this.queue.length - 1]
+  return this.queue[this.size() - 1]
 }
 
 MusicPlayer.prototype.get = function (pos) {
@@ -321,10 +351,6 @@ MusicPlayer.prototype.remove = function (pos) {
   if (pos === undefined) return
   pos = Math.abs(parseInt(pos))
   return this.queue.splice(pos, 1)[0]
-}
-
-MusicPlayer.prototype.size = function () {
-  return this.queue.length
 }
 
 MusicPlayer.prototype.skip = function () {
@@ -377,6 +403,7 @@ MusicPlayer.prototype.reset = function () {
   this.playing = false
   this.active = false
   this.looping = false
+  this.members = []
   this.emit('reset')
 }
 
@@ -388,6 +415,25 @@ MusicPlayer.prototype.volume = function (value) {
 MusicPlayer.prototype.time = function () {
   if (!this.connection || !this.connection.dispatcher) return '0:00'
   return formatTime(this.connection.dispatcher.streamTime)
+}
+
+MusicPlayer.prototype.update = function (item) {
+  let cuts = []
+  let size = 0
+  for (let i = 0; i < this.size(); i++) {
+    let cur = this.members.indexOf(this.queue[i].author.id)
+    let next = (i + 1) >= this.size() ? -1 : this.members.indexOf(this.queue[i + 1].author.id)
+    if (next <= cur) {
+      let stack = this.queue.slice(size, i + 1)
+      size += stack.length
+      cuts.push(stack)
+    }
+  }
+  let index = cuts.findIndex(x => !x.map(y => y.author.id).includes(item.author.id))
+  if (index === -1) index = cuts.length - 1
+  if (index === -1) cuts.push(item)
+  else cuts[index].push(item)
+  this.queue = [].concat.apply([], cuts)
 }
 
 async function searchSC (query) {
@@ -596,6 +642,8 @@ async function getYTPlaylistVids (id) {
 }
 
 async function getItemData (url) {
+  let success = await got(url).catch(e => { return null })
+  if (!success) return null
   return {
     type: 'url',
     title: url,
@@ -656,12 +704,12 @@ function formatYTTime (duration) {
 }
 
 function validURL (str) {
-  var pattern = new RegExp('^(https?:\\/\\/)?' + // protocol
-    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' + // domain name
-    '((\\d{1,3}\\.){3}\\d{1,3}))' + // OR ip (v4) address
-    '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' + // port and path
-    '(\\?[;&a-z\\d%_.~+=-]*)?' + // query string
-    '(\\#[-a-z\\d_]*)?$', 'i') // fragment locator
+  let pattern = new RegExp('^(https?:\\/\\/)?' +
+    '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|' +
+    '((\\d{1,3}\\.){3}\\d{1,3}))' +
+    '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*' +
+    '(\\?[;&a-z\\d%_.~+=-]*)?' +
+    '(\\#[-a-z\\d_]*)?$', 'i')
   return !!pattern.test(str)
 }
 

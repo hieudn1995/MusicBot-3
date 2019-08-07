@@ -1,16 +1,20 @@
 /* global Player:writable */
-let cfg = { token: process.env.BOT_TOKEN, prefix: '>' }
+let fs = require('fs')
+let readline = require('readline')
 let Discord = require('discord.js')
 let path = require('path')
-let fs = require('fs')
 let bot = new Discord.Client()
+
+loadEnv()
+let cfg = { token: process.env.BOT_TOKEN, prefix: '>' }
 let MusicPlayer = require('./modules/MusicPlayer')
 
-Player = new MusicPlayer(bot, { color: 4360181 })
+Player = new MusicPlayer(bot, { color: 4360181, flags: 16 })
 
 bot.on('ready', () => {
   bot.guilds.array().map(x => Player.init(x.id))
   console.log('Woof! I am barking around.')
+  userInput()
 })
 bot.on('guildCreate', guild => Player.init(guild.id))
 bot.on('guildDelete', guild => Player.strike(guild.id))
@@ -65,6 +69,44 @@ function getAllFiles (dir) {
     let isDirectory = fs.statSync(name).isDirectory()
     return isDirectory ? [...files, ...getAllFiles(name)] : [...files, name]
   }, [])
+}
+
+function loadEnv () {
+  let file = fs.readFileSync('.env', { encoding: 'utf-8' })
+  let lines = file.split('\r\n').filter(x => x.trim() !== '')
+  lines.forEach(x => {
+    let parts = x.split('=')
+    let key = parts.shift()
+    let value = parts.join('=')
+    process.env[key] = value
+  })
+}
+
+function userInput () {
+  let rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  rl.on('line', async data => {
+    data = data.trim()
+    if (data === 'quit') {
+      bot.destroy()
+      process.exit()
+    } else if (data === 'restart') {
+      await bot.destroy()
+      bot.login(cfg.token)
+      rl.close()
+    } else if (data === 'clear') {
+      var lines = process.stdout.getWindowSize()[1]
+      for (var i = 0; i < lines; i++) {
+        console.log('\r\n')
+      }
+    } else {
+      try {
+        // eslint-disable-next-line no-eval
+        console.log(eval(data))
+      } catch (e) {
+        console.error(`\x1b[31m${e.message}\x1b[0m`)
+      }
+    }
+  })
 }
 
 bot.login(cfg.token)
