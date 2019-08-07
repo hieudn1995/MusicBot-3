@@ -68,7 +68,7 @@ function trimSentence (str, limit) {
 }
 
 function showInfo (msg, Player, index) {
-  if (index === undefined) {
+  if (index === '') {
     let list = []
     let queue = Player.get()
     let size = Player.size()

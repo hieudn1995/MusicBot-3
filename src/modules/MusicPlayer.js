@@ -432,7 +432,15 @@ MusicPlayer.prototype.update = function (item) {
   let index = cuts.findIndex(x => !x.map(y => y.author.id).includes(item.author.id))
   if (index === -1) index = cuts.length - 1
   if (index === -1) cuts.push(item)
-  else cuts[index].push(item)
+  else {
+    let put = 0
+    let pos = this.members.indexOf(item.author.id)
+    for (let i = 0; i < cuts[index].length; i++) {
+      let cur = this.members.indexOf(cuts[index][i].author.id)
+      if (cur <= pos) put++
+    }
+    cuts[index].splice(put, 0, item)
+  }
   this.queue = [].concat.apply([], cuts)
 }
 
