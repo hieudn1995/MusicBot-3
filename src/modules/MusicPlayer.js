@@ -7,9 +7,9 @@ let apiGoogle = process.env.API_GOOGLE
 let apiSoundCloud = process.env.API_SOUNDCLOUD
 
 let DISPLAY = [
-  'mini', // Minified output
-  'silent', // Console output only
-  'hidden' // No output
+  'MINI', // Minified output
+  'SILENT', // Console output only
+  'HIDDEN' // No output
 ]
 
 let FLAGS = {
@@ -17,7 +17,8 @@ let FLAGS = {
   2: 'LEAVE_ON_CHANNEL_EMPTY',
   4: 'DELETE_ITEM_MESSAGE_ON_ITEM_END',
   8: 'REMOVE_USER_ITEMS_ON_USER_LEAVE',
-  16: 'MESSAGES_TEMPORARY'
+  16: 'MESSAGES_TEMPORARY',
+  32: 'FAIR_MODE'
 }
 
 class MusicPlayer extends Event {
@@ -38,14 +39,21 @@ class MusicPlayer extends Event {
       this.get = function (msg, checkOnly) {
         let Player = this[msg.guild.id]
         if (!Player) Player = this.init(msg.guild.id)
-        if (Player.channel) return Player
-        if (checkOnly) return null
+        if (Player.channel || checkOnly) return Player
         if (!Player.join(msg)) return null
         return Player
       }
     } else {
       this.display = DISPLAY.indexOf(`${opts.display}`.toLowerCase()) + 1
-      this.flags = getFlags(opts.flags)
+      this.flags = {
+        n: FLAGS,
+        i: opts.flags || 0,
+        get: t => {
+          let r = Object.keys(this.flags.n).filter(x => x & this.flags.i).map(x => this.flags.n[x])
+          if (t === undefined) return r
+          else return r.includes(t)
+        }
+      }
       this.color = opts.color || null
       this.connection = null
       this.playing = false
@@ -53,6 +61,7 @@ class MusicPlayer extends Event {
       this.channel = null
       this.active = false
       this.members = []
+      this.timers = []
       this.last = null
       this.msg = null
       this.queue = []
@@ -146,7 +155,7 @@ class MusicPlayer extends Event {
         }
       }
       this.processMsg = m => {
-        if (m && this.flags.includes('MESSAGES_TEMPORARY')) {
+        if (m && this.flags.get('MESSAGES_TEMPORARY')) {
           return new Promise((resolve, reject) => {
             setTimeout(() => {
               m.delete()
@@ -157,12 +166,12 @@ class MusicPlayer extends Event {
       }
       this.on('skip', () => this.next())
       this.on('finish', () => {
-        if (this.flags.includes('LEAVE_ON_QUEUE_END')) {
+        if (this.flags.get('LEAVE_ON_QUEUE_END')) {
           this.reset()
         }
       })
       this.on('end', () => {
-        if (this.last && this.flags.includes('DELETE_ITEM_MESSAGE_ON_ITEM_END')) {
+        if (this.last && this.flags.get('DELETE_ITEM_MESSAGE_ON_ITEM_END')) {
           this.last.delete()
         }
       })
@@ -171,15 +180,31 @@ class MusicPlayer extends Event {
         if (this.connection) {
           this.channel = this.connection.channel
           if (this.channel.members.size === 1) {
-            if (this.flags.includes('LEAVE_ON_CHANNEL_EMPTY')) {
+            if (this.flags.get('LEAVE_ON_CHANNEL_EMPTY')) {
               this.reset()
             }
           }
           if (oldm.channel === this.channel && newm.channel !== oldm.channel) {
-            if (this.size() && this.flags.includes('REMOVE_USER_ITEMS_ON_USER_LEAVE')) {
-              let first = this.queue.shift()
-              this.queue = this.queue.filter(x => x.author.id !== oldm.id)
-              this.queue.unshift(first)
+            if (this.size() && this.flags.get('REMOVE_USER_ITEMS_ON_USER_LEAVE')) {
+              let old = this.timers.findIndex(x => x.id === oldm.id)
+              if (old >= 0) {
+                clearTimeout(this.timers[old].timer)
+                this.timers.splice(old, 1)
+              }
+              let timer = setTimeout(() => {
+                if (this.size() && !this.members.includes(oldm.id)) {
+                  let first = this.queue.shift()
+                  this.queue = this.queue.filter(x => x.author.id !== oldm.id)
+                  this.queue.unshift(first)
+                  let author = bot.users.find(x => x.id === oldm.id)
+                  this.msg.channel.send(`Removed \`${author.username}#${author.discriminator}\`'s items because they left the channel for too long.`)
+                }
+              }, 60000)
+              this.timers.push({
+                timer: timer,
+                type: 'timeout',
+                id: oldm.id
+              })
             }
           }
         }
@@ -291,14 +316,16 @@ MusicPlayer.prototype.play = async function (query, author) {
       }
     }
     if (!disp) return
-    strm.on('error', e => {
-      this.connection.player.streamingData.pausedTime = 0
-      this.active = true
-      this.playing = true
-      first.streamError = e.message.substr(e.message.indexOf(': ') + 2)
-      this.emit('play', first)
-      setTimeout(() => this.next(), 500)
-    })
+    if (strm) {
+      strm.on('error', e => {
+        this.connection.player.streamingData.pausedTime = 0
+        this.active = true
+        this.playing = true
+        first.streamError = e.message.substr(e.message.indexOf(': ') + 2)
+        this.emit('play', first)
+        setTimeout(() => this.next(), 500)
+      })
+    }
     disp.on('start', () => {
       this.connection.player.streamingData.pausedTime = 0
       this.active = true
@@ -399,11 +426,17 @@ MusicPlayer.prototype.reset = function () {
   this.queue = []
   if (this.connection) this.connection.channel.leave()
   this.connection = null
-  this.channel = null
-  this.playing = false
-  this.active = false
   this.looping = false
+  this.playing = false
+  this.channel = null
+  this.active = false
   this.members = []
+  this.timers.forEach(x => {
+    if (x.type === 'timeout') clearTimeout(x)
+    if (x.type === 'interval') clearInterval(x)
+    if (x.type === 'immediate') clearImmediate(x)
+  })
+  this.timers = []
   this.emit('reset')
 }
 
@@ -418,6 +451,10 @@ MusicPlayer.prototype.time = function () {
 }
 
 MusicPlayer.prototype.update = function (item) {
+  if (!this.flags.get('FAIR_MODE')) {
+    this.queue.push(item)
+    return
+  }
   let cuts = []
   let size = 0
   for (let i = 0; i < this.size(); i++) {
@@ -719,11 +756,6 @@ function validURL (str) {
     '(\\?[;&a-z\\d%_.~+=-]*)?' +
     '(\\#[-a-z\\d_]*)?$', 'i')
   return !!pattern.test(str)
-}
-
-function getFlags (n) {
-  let res = Object.keys(FLAGS).filter(x => x & n)
-  return res.map(x => FLAGS[x])
 }
 
 module.exports = MusicPlayer

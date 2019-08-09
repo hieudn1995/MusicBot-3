@@ -9,7 +9,7 @@ loadEnv()
 let cfg = { token: process.env.BOT_TOKEN, prefix: '>' }
 let MusicPlayer = require('./modules/MusicPlayer')
 
-Player = new MusicPlayer(bot, { color: 4360181, flags: 16 })
+Player = new MusicPlayer(bot, { color: 4360181, flags: 32 + 8 })
 
 bot.on('ready', () => {
   bot.guilds.array().map(x => Player.init(x.id))
