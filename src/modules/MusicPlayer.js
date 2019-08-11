@@ -360,10 +360,6 @@ MusicPlayer.prototype.first = async function () {
   return item
 }
 
-MusicPlayer.prototype.last = function () {
-  return this.queue[this.size() - 1]
-}
-
 MusicPlayer.prototype.get = function (pos) {
   if (pos === undefined) return this.queue
   pos = Math.abs(parseInt(pos))
@@ -432,9 +428,9 @@ MusicPlayer.prototype.reset = function () {
   this.active = false
   this.members = []
   this.timers.forEach(x => {
-    if (x.type === 'timeout') clearTimeout(x)
-    if (x.type === 'interval') clearInterval(x)
-    if (x.type === 'immediate') clearImmediate(x)
+    if (x.type === 'timeout') clearTimeout(x.timer)
+    if (x.type === 'interval') clearInterval(x.timer)
+    if (x.type === 'immediate') clearImmediate(x.timer)
   })
   this.timers = []
   this.emit('reset')
