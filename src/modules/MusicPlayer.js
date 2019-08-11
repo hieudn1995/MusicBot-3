@@ -43,13 +43,14 @@ class MusicPlayer extends Event {
         if (!Player.join(msg)) return null
         return Player
       }
+      this.flags = FLAGS
+      this.display = DISPLAY
     } else {
       this.display = DISPLAY.indexOf(`${opts.display}`.toLowerCase()) + 1
       this.flags = {
-        n: FLAGS,
         i: opts.flags || 0,
         get: t => {
-          let r = Object.keys(this.flags.n).filter(x => x & this.flags.i).map(x => this.flags.n[x])
+          let r = Object.keys(FLAGS).filter(x => x & this.flags.i).map(x => FLAGS[x])
           if (t === undefined) return r
           else return r.includes(t)
         }
@@ -186,25 +187,27 @@ class MusicPlayer extends Event {
           }
           if (oldm.channel === this.channel && newm.channel !== oldm.channel) {
             if (this.size() && this.flags.get('REMOVE_USER_ITEMS_ON_USER_LEAVE')) {
-              let old = this.timers.findIndex(x => x.id === oldm.id)
-              if (old >= 0) {
-                clearTimeout(this.timers[old].timer)
-                this.timers.splice(old, 1)
+              let old = this.timers.find(x => x.id === oldm.id)
+              if (old) old.destroy()
+              let item = { id: oldm.id }
+              item.destroy = () => {
+                let index = this.timers.findIndex(x => x.id === item.id)
+                if (index >= 0) {
+                  clearTimeout(this.timers[index].timer)
+                  this.timers.splice(index, 1)
+                }
               }
-              let timer = setTimeout(() => {
+              item.timer = setTimeout(() => {
                 if (this.size() && !this.members.includes(oldm.id)) {
                   let first = this.queue.shift()
                   this.queue = this.queue.filter(x => x.author.id !== oldm.id)
                   this.queue.unshift(first)
                   let author = bot.users.find(x => x.id === oldm.id)
-                  this.msg.channel.send(`Removed \`${author.username}#${author.discriminator}\`'s items because they left the channel for too long.`)
+                  if (author) this.msg.channel.send(`Removed \`${author.username}#${author.discriminator}\`'s items because they left the channel for too long.`)
                 }
+                item.destroy()
               }, 60000)
-              this.timers.push({
-                timer: timer,
-                type: 'timeout',
-                id: oldm.id
-              })
+              this.timers.push(item)
             }
           }
         }
@@ -427,12 +430,7 @@ MusicPlayer.prototype.reset = function () {
   this.channel = null
   this.active = false
   this.members = []
-  this.timers.forEach(x => {
-    if (x.type === 'timeout') clearTimeout(x.timer)
-    if (x.type === 'interval') clearInterval(x.timer)
-    if (x.type === 'immediate') clearImmediate(x.timer)
-  })
-  this.timers = []
+  this.timers.forEach(x => x.destroy())
   this.emit('reset')
 }
 

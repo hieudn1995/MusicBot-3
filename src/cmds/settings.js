@@ -7,7 +7,7 @@ module.exports = {
   command: async function (msg, cmd, args) {
     let Player = global.Player.get(msg, true)
     if (!args.length) {
-      let flags = Player.flags.n
+      let flags = global.Player.flags
       let box = `\`Color\`: ${intToHex(Player.color)}\n`
       for (let key in flags) {
         let prop = flags[key]
@@ -23,7 +23,7 @@ module.exports = {
       })
     } else {
       let id = args[0].toLowerCase()
-      let flags = Player.flags.n
+      let flags = global.Player.flags
       let props = []
       for (let key in flags) {
         let prop = flags[key]
