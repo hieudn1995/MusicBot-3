@@ -424,13 +424,15 @@ MusicPlayer.prototype.loop = function () {
 MusicPlayer.prototype.reset = function () {
   this.queue = []
   if (this.connection) this.connection.channel.leave()
+  this.timers.forEach(x => x.destroy())
   this.connection = null
   this.looping = false
   this.playing = false
   this.channel = null
   this.active = false
   this.members = []
-  this.timers.forEach(x => x.destroy())
+  this.last = null
+  this.msg = null
   this.emit('reset')
 }
 
