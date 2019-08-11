@@ -7,7 +7,7 @@ module.exports = {
   args: 1,
   command: async function (msg, cmd, args) {
     let query = args.join(' ')
-    if (query === 'list') printList(msg)
+    if (query === 'list') return printList(msg)
     let Player = global.Player.get(msg)
     if (!Player) return msg.channel.send("You're not in a voice channel!")
     if (Player.channel !== msg.member.voice.channel) {
@@ -53,10 +53,13 @@ let radios = {
   '1Live': 'https://dg-wdr-https-fra-dtag-cdn.sslcast.addradio.de/wdr/1live/live/mp3/128/stream.mp3',
   'WDR Cosmo': 'https://dg-wdr-https-dus-dtag-cdn.sslcast.addradio.de/wdr/cosmo/live/mp3/128/stream.mp3',
   'listen.moe': 'https://listen.moe/opus',
-  'listen.moe kpop': 'https://listen.moe/kpop/opus',
+  'listen.moe KPOP': 'https://listen.moe/kpop/opus',
   AnimeRadio: 'http://stream.animeradio.de/animeradio.mp3',
   Chillsky: 'http://hyades.shoutca.st:8043/stream',
-  'osu!station': 'http://net.web.yas-online.net:8000/osustation'
+  'osu!station': 'http://net.web.yas-online.net:8000/osustation',
+  'R/a/dio': 'https://stream.r-a-d.io/main.mp3',
+  GamerSound: 'http://149.56.147.197:8716/stream',
+  'Powerplay JPOP': 'http://agnes.torontocast.com:8102/;'
 }
 let keys = Object.keys(radios).sort()
 radios = keys.reduce((acc, key) => {

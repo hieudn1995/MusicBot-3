@@ -200,10 +200,12 @@ class MusicPlayer extends Event {
               item.timer = setTimeout(() => {
                 if (this.size() && !this.members.includes(oldm.id)) {
                   let first = this.queue.shift()
+                  let len = this.size()
                   this.queue = this.queue.filter(x => x.author.id !== oldm.id)
+                  len -= this.size()
                   this.queue.unshift(first)
                   let author = bot.users.find(x => x.id === oldm.id)
-                  if (author) this.msg.channel.send(`Removed \`${author.username}#${author.discriminator}\`'s items because they left the channel for too long.`)
+                  if (author && len > 0) this.msg.channel.send(`Removed \`${author.username}#${author.discriminator}\`'s items because they left the channel for too long.`)
                 }
                 item.destroy()
               }, 60000)
