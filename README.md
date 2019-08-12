@@ -18,11 +18,8 @@ let MusicPlayer = require('./modules/MusicPlayer')
 Player = new MusicPlayer(bot, { color: 4360181 })
 
 bot.on('ready', () => {
-  bot.guilds.array().map(x => Player.init(x.id))
   console.log('Bot is running!')
 })
-bot.on('guildCreate', guild => Player.init(guild.id))
-bot.on('guildDelete', guild => Player.strike(guild.id))
 
 bot.login(token)
 ...

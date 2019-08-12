@@ -12,12 +12,9 @@ let MusicPlayer = require('./modules/MusicPlayer')
 Player = new MusicPlayer(bot, { color: 4360181, flags: 32 + 8 })
 
 bot.on('ready', () => {
-  bot.guilds.array().map(x => Player.init(x.id))
   console.log('Woof! I am barking around.')
   userInput()
 })
-bot.on('guildCreate', guild => Player.init(guild.id))
-bot.on('guildDelete', guild => Player.strike(guild.id))
 
 bot.on('message', async msg => {
   if (!msg.content.startsWith(cfg.prefix)) return
@@ -90,6 +87,7 @@ function userInput () {
       bot.destroy()
       process.exit()
     } else if (data === 'restart') {
+      Player.reset()
       await bot.destroy()
       bot.login(cfg.token)
       rl.close()

@@ -45,6 +45,10 @@ class MusicPlayer extends Event {
       }
       this.flags = FLAGS
       this.display = DISPLAY
+      bot.on('ready', () => bot.guilds.array().map(x => this.init(x.id)))
+      bot.on('guildCreate', guild => this.init(guild.id))
+      bot.on('guildDelete', guild => this.strike(guild.id))
+      this.reset = () => bot.guilds.array().map(x => this[x.id].reset())
     } else {
       this.display = DISPLAY.indexOf(`${opts.display}`.toLowerCase()) + 1
       this.flags = {
