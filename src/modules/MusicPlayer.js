@@ -312,6 +312,7 @@ MusicPlayer.prototype.play = async function (query, author) {
     let first = await this.first()
     let disp = null
     let strm = null
+    await new Promise((resolve, reject) => setTimeout(resolve, 50))
     switch (first.type) {
       case 'yt': {
         let stream = ytdl(first.url, { filter: 'audioonly' })
